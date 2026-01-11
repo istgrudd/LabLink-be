@@ -19,7 +19,7 @@ public class MemberController {
 
     // 1. Create Member (Hanya Admin)
     @PostMapping
-//    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<ResearchAssistant> createMember(@RequestBody CreateMemberRequest request) {
         ResearchAssistant created = memberService.createResearchAssistant(request);
         return ResponseEntity.ok(created);
@@ -27,7 +27,7 @@ public class MemberController {
 
     // 2. Get All Members (Bisa Admin & Asisten lain)
     @GetMapping
-//    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<ResearchAssistant>> getAllMembers() {
         return ResponseEntity.ok(memberService.getAllMembers());
     }
@@ -36,7 +36,7 @@ public class MemberController {
     // URL: PUT /api/members/{id}
     // Contoh: /api/members/a1b2-c3d4-e5f6 (Pakai UUID)
     @PutMapping("/{id}")
-    // @PreAuthorize("isAuthenticated()") <-- Nanti dinyalakan
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ResearchAssistant> updateMember(
             @PathVariable String id, 
             @RequestBody UpdateMemberRequest request) {
