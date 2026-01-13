@@ -30,11 +30,13 @@ public class MemberController {
     // ========== READ ==========
     
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<MemberResponse>> getAllMembers() {
         return ResponseEntity.ok(memberService.getAllMembers());
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<MemberResponse> getMemberById(@PathVariable String id) {
         return ResponseEntity.ok(memberService.getMemberById(id));
     }
