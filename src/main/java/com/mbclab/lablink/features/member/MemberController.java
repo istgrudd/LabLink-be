@@ -1,6 +1,7 @@
 package com.mbclab.lablink.features.member;
 
 import com.mbclab.lablink.features.member.dto.CreateMemberRequest;
+import com.mbclab.lablink.features.member.dto.MemberResponse;
 import com.mbclab.lablink.features.member.dto.UpdateMemberRequest;
 
 import lombok.RequiredArgsConstructor;
@@ -11,44 +12,56 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/member")
+@RequestMapping("/api/members")
 @RequiredArgsConstructor
 public class MemberController {
 
     private final MemberService memberService;
 
-    // 1. Create Member (Hanya Admin)
+    // ========== CREATE ==========
+    
     @PostMapping
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    public ResponseEntity<ResearchAssistant> createMember(@RequestBody CreateMemberRequest request) {
-        ResearchAssistant created = memberService.createResearchAssistant(request);
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<MemberResponse> createMember(@RequestBody CreateMemberRequest request) {
+        MemberResponse created = memberService.createResearchAssistant(request);
         return ResponseEntity.ok(created);
     }
 
-    // 2. Get All Members (Bisa Admin & Asisten lain)
+    // ========== READ ==========
+    
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<ResearchAssistant>> getAllMembers() {
+    public ResponseEntity<List<MemberResponse>> getAllMembers() {
         return ResponseEntity.ok(memberService.getAllMembers());
     }
 
-    // 3. Update Member
-    // URL: PUT /api/members/{id}
-    // Contoh: /api/members/a1b2-c3d4-e5f6 (Pakai UUID)
-    @PutMapping("/{id}")
+    @GetMapping("/{id}")
+    public ResponseEntity<MemberResponse> getMemberById(@PathVariable String id) {
+        return ResponseEntity.ok(memberService.getMemberById(id));
+    }
+
+    @GetMapping("/nim/{nim}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ResearchAssistant> updateMember(
+    public ResponseEntity<MemberResponse> getMemberByNim(@PathVariable String nim) {
+        return ResponseEntity.ok(memberService.getMemberByNim(nim));
+    }
+
+    // ========== UPDATE ==========
+    
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<MemberResponse> updateMember(
             @PathVariable String id, 
             @RequestBody UpdateMemberRequest request) {
-            
-        ResearchAssistant updated = memberService.updateMember(id, request);
+        MemberResponse updated = memberService.updateMember(id, request);
         return ResponseEntity.ok(updated);
     }
 
+    // ========== DELETE ==========
+    
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteMember(@PathVariable String id) {
         memberService.deleteMember(id);
-        return ResponseEntity.noContent().build(); // Return 204 No Content (Standard Delete)
+        return ResponseEntity.noContent().build();
     }
 }
