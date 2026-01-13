@@ -18,7 +18,7 @@ public class ResearchAssistant extends AppUser {
     private String expertDivision; // Misal: Big Data, Cyber Security
 
     @Column(nullable = false)
-    private String department;     // Misal: Informatika
+    private String department;     // Misal: Internal atau Eksternal
 
     // Field Kontak (Diisi nanti oleh User saat Aktivasi)
     private String email;
