@@ -19,8 +19,6 @@ public class ActivityLogService {
 
     private final ActivityLogRepository activityLogRepository;
 
-    private static final int DEFAULT_PAGE_SIZE = 50;
-
     /**
      * Get all logs with pagination (latest first)
      */
