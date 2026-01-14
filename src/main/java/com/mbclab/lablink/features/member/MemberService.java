@@ -38,7 +38,11 @@ public class MemberService {
         // 3. Set Data Identitas
         newMember.setUsername(request.getNim());
         newMember.setFullName(request.getFullName());
-        newMember.setRole("ASSISTANT");
+        // Use role from request if provided, otherwise default to ASSISTANT
+        String role = (request.getRole() != null && !request.getRole().isBlank()) 
+                ? request.getRole().toUpperCase() 
+                : "ASSISTANT";
+        newMember.setRole(role);
         
         // 4. Set Password Default (= NIM) & Enkripsi
         String encryptedPassword = passwordEncoder.encode(request.getNim());
