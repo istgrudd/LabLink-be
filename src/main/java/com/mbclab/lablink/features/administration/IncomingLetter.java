@@ -1,4 +1,4 @@
-package com.mbclab.lablink.features.letter;
+package com.mbclab.lablink.features.administration;
 
 import com.mbclab.lablink.shared.BaseEntity;
 import jakarta.persistence.*;

@@ -1,6 +1,6 @@
-package com.mbclab.lablink.features.letter;
+package com.mbclab.lablink.features.administration;
 
-import com.mbclab.lablink.features.letter.dto.*;
+import com.mbclab.lablink.features.administration.dto.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/letters")
+@RequestMapping("/api/administration/letters")
 @RequiredArgsConstructor
 public class LetterController {
 
@@ -18,7 +18,7 @@ public class LetterController {
     // ==================== SURAT KELUAR ====================
     
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SEKRETARIS')")
     public ResponseEntity<LetterResponse> createLetter(@RequestBody CreateLetterRequest request) {
         LetterResponse created = letterService.createLetter(request);
         return ResponseEntity.ok(created);
@@ -45,7 +45,7 @@ public class LetterController {
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SEKRETARIS')")
     public ResponseEntity<LetterResponse> updateStatus(
             @PathVariable String id,
             @RequestParam String status) {
@@ -53,7 +53,7 @@ public class LetterController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SEKRETARIS')")
     public ResponseEntity<Void> deleteLetter(@PathVariable String id) {
         letterService.deleteLetter(id);
         return ResponseEntity.noContent().build();
@@ -62,7 +62,7 @@ public class LetterController {
     // ==================== SURAT MASUK ====================
     
     @PostMapping("/incoming")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SEKRETARIS')")
     public ResponseEntity<IncomingLetterResponse> createIncomingLetter(
             @RequestBody CreateIncomingLetterRequest request) {
         IncomingLetterResponse created = letterService.createIncomingLetter(request);
@@ -82,7 +82,7 @@ public class LetterController {
     }
 
     @DeleteMapping("/incoming/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SEKRETARIS')")
     public ResponseEntity<Void> deleteIncomingLetter(@PathVariable String id) {
         letterService.deleteIncomingLetter(id);
         return ResponseEntity.noContent().build();

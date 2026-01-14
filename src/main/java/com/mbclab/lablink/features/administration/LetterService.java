@@ -1,8 +1,8 @@
-package com.mbclab.lablink.features.letter;
+package com.mbclab.lablink.features.administration;
 
 import com.mbclab.lablink.features.event.Event;
 import com.mbclab.lablink.features.event.EventRepository;
-import com.mbclab.lablink.features.letter.dto.*;
+import com.mbclab.lablink.features.administration.dto.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

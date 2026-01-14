@@ -34,9 +34,6 @@ class ProjectControllerTest {
     @Autowired
     private MemberRepository memberRepository;
 
-    @Autowired
-    private ProjectRepository projectRepository;
-
     private static String createdProjectId;
     private static String testMemberId;
 

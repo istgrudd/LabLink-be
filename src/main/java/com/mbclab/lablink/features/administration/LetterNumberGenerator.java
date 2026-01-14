@@ -1,4 +1,4 @@
-package com.mbclab.lablink.features.letter;
+package com.mbclab.lablink.features.administration;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

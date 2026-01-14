@@ -1,4 +1,4 @@
-package com.mbclab.lablink.features.letter;
+package com.mbclab.lablink.features.administration;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

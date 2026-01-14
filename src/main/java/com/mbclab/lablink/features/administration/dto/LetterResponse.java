@@ -1,4 +1,4 @@
-package com.mbclab.lablink.features.letter.dto;
+package com.mbclab.lablink.features.administration.dto;
 
 import com.mbclab.lablink.shared.BaseResponse;
 import lombok.AllArgsConstructor;
