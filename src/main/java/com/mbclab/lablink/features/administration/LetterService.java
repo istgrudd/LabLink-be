@@ -1,9 +1,11 @@
 package com.mbclab.lablink.features.administration;
 
+import com.mbclab.lablink.features.activitylog.AuditEvent;
 import com.mbclab.lablink.features.event.Event;
 import com.mbclab.lablink.features.event.EventRepository;
 import com.mbclab.lablink.features.administration.dto.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +22,7 @@ public class LetterService {
     private final IncomingLetterRepository incomingLetterRepository;
     private final EventRepository eventRepository;
     private final LetterNumberGenerator letterNumberGenerator;
+    private final ApplicationEventPublisher eventPublisher;
 
     // ==================== SURAT KELUAR ====================
     
@@ -55,6 +58,12 @@ public class LetterService {
         }
         
         Letter saved = letterRepository.save(letter);
+        
+        // Publish audit event
+        eventPublisher.publishEvent(AuditEvent.create(
+                "LETTER", saved.getId(), saved.getSubject(),
+                "Created letter: " + saved.getLetterNumber()));
+        
         return toResponse(saved);
     }
 
@@ -82,15 +91,28 @@ public class LetterService {
                 .orElseThrow(() -> new RuntimeException("Surat tidak ditemukan"));
         letter.setStatus(status.toUpperCase());
         Letter saved = letterRepository.save(letter);
+        
+        // Publish audit event
+        eventPublisher.publishEvent(AuditEvent.update(
+                "LETTER", saved.getId(), saved.getSubject(),
+                "Updated letter status to: " + status));
+        
         return toResponse(saved);
     }
 
     @Transactional
     public void deleteLetter(String id) {
-        if (!letterRepository.existsById(id)) {
-            throw new RuntimeException("Surat tidak ditemukan");
-        }
+        Letter letter = letterRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Surat tidak ditemukan"));
+        String subject = letter.getSubject();
+        String number = letter.getLetterNumber();
+        
         letterRepository.deleteById(id);
+        
+        // Publish audit event
+        eventPublisher.publishEvent(AuditEvent.delete(
+                "LETTER", id, subject,
+                "Deleted letter: " + number));
     }
 
     // ==================== SURAT MASUK ====================

@@ -1,6 +1,7 @@
 package com.mbclab.lablink.features.event;
 
 import com.mbclab.lablink.features.member.ResearchAssistant;
+import com.mbclab.lablink.features.period.AcademicPeriod;
 import com.mbclab.lablink.shared.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -33,6 +34,11 @@ public class Event extends BaseEntity {
 
     @Column(nullable = false)
     private String status = "PLANNED";  // PLANNED, ONGOING, COMPLETED, CANCELLED
+
+    // Periode kepengurusan
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "period_id")
+    private AcademicPeriod period;
 
     // Person In Charge (Ketua Pelaksana)
     @ManyToOne(fetch = FetchType.LAZY)

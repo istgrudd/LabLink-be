@@ -1,9 +1,11 @@
 package com.mbclab.lablink.features.event;
 
+import com.mbclab.lablink.features.activitylog.AuditEvent;
 import com.mbclab.lablink.features.event.dto.*;
 import com.mbclab.lablink.features.member.MemberRepository;
 import com.mbclab.lablink.features.member.ResearchAssistant;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +21,7 @@ public class EventService {
     private final EventCommitteeRepository committeeRepository;
     private final MemberRepository memberRepository;
     private final EventCodeGenerator eventCodeGenerator;
+    private final ApplicationEventPublisher eventPublisher;
 
     // ========== CREATE ==========
     
@@ -42,6 +45,12 @@ public class EventService {
         event.setPic(pic);
         
         Event saved = eventRepository.save(event);
+        
+        // Publish audit event
+        eventPublisher.publishEvent(AuditEvent.create(
+                "EVENT", saved.getId(), saved.getName(),
+                "Created event: " + saved.getEventCode()));
+        
         return toResponse(saved);
     }
 
@@ -95,6 +104,12 @@ public class EventService {
         }
         
         Event saved = eventRepository.save(event);
+        
+        // Publish audit event
+        eventPublisher.publishEvent(AuditEvent.update(
+                "EVENT", saved.getId(), saved.getName(),
+                "Updated event: " + saved.getEventCode()));
+        
         return toResponse(saved);
     }
 
@@ -102,10 +117,17 @@ public class EventService {
     
     @Transactional
     public void deleteEvent(String id) {
-        if (!eventRepository.existsById(id)) {
-            throw new RuntimeException("Event tidak ditemukan");
-        }
+        Event event = eventRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Event tidak ditemukan"));
+        String eventName = event.getName();
+        String eventCode = event.getEventCode();
+        
         eventRepository.deleteById(id);
+        
+        // Publish audit event
+        eventPublisher.publishEvent(AuditEvent.delete(
+                "EVENT", id, eventName,
+                "Deleted event: " + eventCode));
     }
 
     // ========== COMMITTEE MANAGEMENT ==========

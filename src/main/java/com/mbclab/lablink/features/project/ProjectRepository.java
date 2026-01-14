@@ -12,9 +12,13 @@ public interface ProjectRepository extends JpaRepository<Project, String> {
     List<Project> findByStatus(String status);
     List<Project> findByDivision(String division);
     List<Project> findByActivityType(String activityType);
+    List<Project> findByPeriodId(String periodId);
     
     Optional<Project> findByProjectCode(String projectCode);
     
     // Untuk generate project code
     long countByActivityType(String activityType);
+    
+    // Untuk period summary
+    int countByPeriodId(String periodId);
 }

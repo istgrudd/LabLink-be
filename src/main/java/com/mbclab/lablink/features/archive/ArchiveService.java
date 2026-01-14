@@ -1,11 +1,13 @@
 package com.mbclab.lablink.features.archive;
 
+import com.mbclab.lablink.features.activitylog.AuditEvent;
 import com.mbclab.lablink.features.archive.dto.*;
 import com.mbclab.lablink.features.event.Event;
 import com.mbclab.lablink.features.event.EventRepository;
 import com.mbclab.lablink.features.project.Project;
 import com.mbclab.lablink.features.project.ProjectRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +24,7 @@ public class ArchiveService {
     private final ProjectRepository projectRepository;
     private final EventRepository eventRepository;
     private final ArchiveCodeGenerator archiveCodeGenerator;
+    private final ApplicationEventPublisher eventPublisher;
 
     // Valid archive types per source
     private static final Set<String> PROJECT_TYPES = Set.of("PUBLIKASI", "HKI", "PKM");
@@ -79,6 +82,12 @@ public class ArchiveService {
         }
         
         Archive saved = archiveRepository.save(archive);
+        
+        // Publish audit event
+        eventPublisher.publishEvent(AuditEvent.create(
+                "ARCHIVE", saved.getId(), saved.getTitle(),
+                "Created archive: " + saved.getArchiveCode()));
+        
         return toResponse(saved);
     }
 
@@ -145,6 +154,12 @@ public class ArchiveService {
         }
         
         Archive saved = archiveRepository.save(archive);
+        
+        // Publish audit event
+        eventPublisher.publishEvent(AuditEvent.update(
+                "ARCHIVE", saved.getId(), saved.getTitle(),
+                "Updated archive: " + saved.getArchiveCode()));
+        
         return toResponse(saved);
     }
 
@@ -152,10 +167,17 @@ public class ArchiveService {
     
     @Transactional
     public void deleteArchive(String id) {
-        if (!archiveRepository.existsById(id)) {
-            throw new RuntimeException("Archive tidak ditemukan");
-        }
+        Archive archive = archiveRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Archive tidak ditemukan"));
+        String title = archive.getTitle();
+        String code = archive.getArchiveCode();
+        
         archiveRepository.deleteById(id);
+        
+        // Publish audit event
+        eventPublisher.publishEvent(AuditEvent.delete(
+                "ARCHIVE", id, title,
+                "Deleted archive: " + code));
     }
 
     // ========== HELPER ==========

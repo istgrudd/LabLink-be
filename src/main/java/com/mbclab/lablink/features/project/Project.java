@@ -1,6 +1,7 @@
 package com.mbclab.lablink.features.project;
 
 import com.mbclab.lablink.features.member.ResearchAssistant;
+import com.mbclab.lablink.features.period.AcademicPeriod;
 import com.mbclab.lablink.shared.BaseEntity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
@@ -47,6 +48,11 @@ public class Project extends BaseEntity {
     private Integer progressPercent = 0;
 
     // ========== RELASI ==========
+
+    // Periode kepengurusan
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "period_id")
+    private AcademicPeriod period;
 
     // Ketua Proyek (1 orang)
     @ManyToOne(fetch = FetchType.LAZY)

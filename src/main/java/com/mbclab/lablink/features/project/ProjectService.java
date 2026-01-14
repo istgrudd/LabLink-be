@@ -1,11 +1,13 @@
 package com.mbclab.lablink.features.project;
 
+import com.mbclab.lablink.features.activitylog.AuditEvent;
 import com.mbclab.lablink.features.member.MemberRepository;
 import com.mbclab.lablink.features.member.ResearchAssistant;
 import com.mbclab.lablink.features.project.dto.CreateProjectRequest;
 import com.mbclab.lablink.features.project.dto.ProjectResponse;
 import com.mbclab.lablink.features.project.dto.UpdateProjectRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +24,7 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final MemberRepository memberRepository;
     private final ProjectCodeGenerator projectCodeGenerator;
+    private final ApplicationEventPublisher eventPublisher;
 
     // ========== CREATE ==========
     
@@ -58,6 +61,12 @@ public class ProjectService {
         project.setTeamMembers(teamMembers);
         
         Project saved = projectRepository.save(project);
+        
+        // Publish audit event
+        eventPublisher.publishEvent(AuditEvent.create(
+                "PROJECT", saved.getId(), saved.getName(),
+                "Created project: " + saved.getProjectCode()));
+        
         return toResponse(saved);
     }
 
@@ -132,6 +141,12 @@ public class ProjectService {
         }
         
         Project saved = projectRepository.save(project);
+        
+        // Publish audit event
+        eventPublisher.publishEvent(AuditEvent.update(
+                "PROJECT", saved.getId(), saved.getName(),
+                "Updated project: " + saved.getProjectCode()));
+        
         return toResponse(saved);
     }
 
@@ -139,10 +154,17 @@ public class ProjectService {
     
     @Transactional
     public void deleteProject(String id) {
-        if (!projectRepository.existsById(id)) {
-            throw new RuntimeException("Project tidak ditemukan");
-        }
+        Project project = projectRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Project tidak ditemukan"));
+        String projectName = project.getName();
+        String projectCode = project.getProjectCode();
+        
         projectRepository.deleteById(id);
+        
+        // Publish audit event
+        eventPublisher.publishEvent(AuditEvent.delete(
+                "PROJECT", id, projectName,
+                "Deleted project: " + projectCode));
     }
 
     // ========== MEMBER MANAGEMENT ==========

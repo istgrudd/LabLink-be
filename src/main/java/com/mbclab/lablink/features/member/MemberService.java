@@ -1,10 +1,12 @@
 package com.mbclab.lablink.features.member;
 
+import com.mbclab.lablink.features.activitylog.AuditEvent;
 import com.mbclab.lablink.features.member.dto.CreateMemberRequest;
 import com.mbclab.lablink.features.member.dto.MemberResponse;
 import com.mbclab.lablink.features.member.dto.UpdateMemberRequest;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +21,7 @@ public class MemberService {
 
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ApplicationEventPublisher eventPublisher;
 
     // ========== CREATE ==========
     
@@ -48,6 +51,12 @@ public class MemberService {
         
         // 6. Simpan dan return response
         ResearchAssistant saved = memberRepository.save(newMember);
+        
+        // Publish audit event
+        eventPublisher.publishEvent(AuditEvent.create(
+                "MEMBER", saved.getId(), saved.getFullName(),
+                "Created member: " + saved.getUsername()));
+        
         return toResponse(saved);
     }
 
@@ -93,6 +102,12 @@ public class MemberService {
         if (request.getSocialMediaLink() != null) member.setSocialMediaLink(request.getSocialMediaLink());
 
         ResearchAssistant saved = memberRepository.save(member);
+        
+        // Publish audit event
+        eventPublisher.publishEvent(AuditEvent.update(
+                "MEMBER", saved.getId(), saved.getFullName(),
+                "Updated member: " + saved.getUsername()));
+        
         return toResponse(saved);
     }
 
@@ -100,10 +115,17 @@ public class MemberService {
     
     @Transactional 
     public void deleteMember(String id) {
-        if (!memberRepository.existsById(id)) {
-            throw new RuntimeException("Member ID " + id + " tidak ditemukan");
-        }
+        ResearchAssistant member = memberRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Member ID " + id + " tidak ditemukan"));
+        String name = member.getFullName();
+        String nim = member.getUsername();
+        
         memberRepository.deleteById(id);
+        
+        // Publish audit event
+        eventPublisher.publishEvent(AuditEvent.delete(
+                "MEMBER", id, name,
+                "Deleted member: " + nim));
     }
 
     // ========== HELPER: Convert to Response DTO ==========

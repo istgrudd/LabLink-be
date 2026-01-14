@@ -1,6 +1,7 @@
 package com.mbclab.lablink.features.administration;
 
 import com.mbclab.lablink.features.event.Event;
+import com.mbclab.lablink.features.period.AcademicPeriod;
 import com.mbclab.lablink.shared.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -52,6 +53,11 @@ public class Letter extends BaseEntity {
 
     // Status: DRAFT, SENT
     private String status = "DRAFT";
+
+    // Periode kepengurusan
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "period_id")
+    private AcademicPeriod period;
 
     // Optional: Link ke Event terkait
     @ManyToOne(fetch = FetchType.LAZY)
