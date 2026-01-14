@@ -4,6 +4,7 @@ import com.mbclab.lablink.features.activitylog.AuditEvent;
 import com.mbclab.lablink.features.archive.dto.*;
 import com.mbclab.lablink.features.event.Event;
 import com.mbclab.lablink.features.event.EventRepository;
+import com.mbclab.lablink.features.period.AcademicPeriodRepository;
 import com.mbclab.lablink.features.project.Project;
 import com.mbclab.lablink.features.project.ProjectRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class ArchiveService {
     private final ProjectRepository projectRepository;
     private final EventRepository eventRepository;
     private final ArchiveCodeGenerator archiveCodeGenerator;
+    private final AcademicPeriodRepository periodRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     // Valid archive types per source
@@ -81,6 +83,9 @@ public class ArchiveService {
             throw new RuntimeException("Source type tidak valid: " + sourceType);
         }
         
+        // Auto-assign to active period
+        periodRepository.findByIsActiveTrue().ifPresent(archive::setPeriod);
+        
         Archive saved = archiveRepository.save(archive);
         
         // Publish audit event
@@ -95,6 +100,12 @@ public class ArchiveService {
     
     public List<ArchiveResponse> getAllArchives() {
         return archiveRepository.findAll().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<ArchiveResponse> getArchivesByPeriod(String periodId) {
+        return archiveRepository.findByPeriodId(periodId).stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }

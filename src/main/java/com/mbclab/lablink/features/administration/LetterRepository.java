@@ -13,6 +13,7 @@ public interface LetterRepository extends JpaRepository<Letter, String> {
     List<Letter> findByLetterType(String letterType);
     List<Letter> findByCategory(String category);
     List<Letter> findByEventId(String eventId);
+    List<Letter> findByPeriodId(String periodId);
     
     // Count letters by type, category, year, and month for number generation
     @Query("SELECT COUNT(l) FROM Letter l WHERE l.letterType = ?1 AND l.category = ?2 " +

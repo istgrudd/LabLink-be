@@ -28,7 +28,11 @@ public class ArchiveController {
     
     @GetMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<ArchiveResponse>> getAllArchives() {
+    public ResponseEntity<List<ArchiveResponse>> getAllArchives(
+            @RequestParam(required = false) String periodId) {
+        if (periodId != null && !periodId.isBlank()) {
+            return ResponseEntity.ok(archiveService.getArchivesByPeriod(periodId));
+        }
         return ResponseEntity.ok(archiveService.getAllArchives());
     }
 

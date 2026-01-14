@@ -3,6 +3,7 @@ package com.mbclab.lablink.features.administration;
 import com.mbclab.lablink.features.activitylog.AuditEvent;
 import com.mbclab.lablink.features.event.Event;
 import com.mbclab.lablink.features.event.EventRepository;
+import com.mbclab.lablink.features.period.AcademicPeriodRepository;
 import com.mbclab.lablink.features.administration.dto.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -22,6 +23,7 @@ public class LetterService {
     private final IncomingLetterRepository incomingLetterRepository;
     private final EventRepository eventRepository;
     private final LetterNumberGenerator letterNumberGenerator;
+    private final AcademicPeriodRepository periodRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     // ==================== SURAT KELUAR ====================
@@ -57,6 +59,9 @@ public class LetterService {
             letter.setEvent(event);
         }
         
+        // Auto-assign to active period
+        periodRepository.findByIsActiveTrue().ifPresent(letter::setPeriod);
+        
         Letter saved = letterRepository.save(letter);
         
         // Publish audit event
@@ -69,6 +74,12 @@ public class LetterService {
 
     public List<LetterResponse> getAllLetters() {
         return letterRepository.findAll().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<LetterResponse> getLettersByPeriod(String periodId) {
+        return letterRepository.findByPeriodId(periodId).stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }

@@ -4,6 +4,7 @@ import com.mbclab.lablink.features.activitylog.AuditEvent;
 import com.mbclab.lablink.features.event.dto.*;
 import com.mbclab.lablink.features.member.MemberRepository;
 import com.mbclab.lablink.features.member.ResearchAssistant;
+import com.mbclab.lablink.features.period.AcademicPeriodRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ public class EventService {
     private final EventCommitteeRepository committeeRepository;
     private final MemberRepository memberRepository;
     private final EventCodeGenerator eventCodeGenerator;
+    private final AcademicPeriodRepository periodRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     // ========== CREATE ==========
@@ -44,6 +46,9 @@ public class EventService {
         event.setStatus("PLANNED");
         event.setPic(pic);
         
+        // 4. Auto-assign to active period
+        periodRepository.findByIsActiveTrue().ifPresent(event::setPeriod);
+        
         Event saved = eventRepository.save(event);
         
         // Publish audit event
@@ -58,6 +63,12 @@ public class EventService {
     
     public List<EventResponse> getAllEvents() {
         return eventRepository.findAll().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<EventResponse> getEventsByPeriod(String periodId) {
+        return eventRepository.findByPeriodId(periodId).stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }

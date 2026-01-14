@@ -3,6 +3,7 @@ package com.mbclab.lablink.features.project;
 import com.mbclab.lablink.features.activitylog.AuditEvent;
 import com.mbclab.lablink.features.member.MemberRepository;
 import com.mbclab.lablink.features.member.ResearchAssistant;
+import com.mbclab.lablink.features.period.AcademicPeriodRepository;
 import com.mbclab.lablink.features.project.dto.CreateProjectRequest;
 import com.mbclab.lablink.features.project.dto.ProjectResponse;
 import com.mbclab.lablink.features.project.dto.UpdateProjectRequest;
@@ -24,6 +25,7 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final MemberRepository memberRepository;
     private final ProjectCodeGenerator projectCodeGenerator;
+    private final AcademicPeriodRepository periodRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     // ========== CREATE ==========
@@ -60,6 +62,9 @@ public class ProjectService {
         project.setLeader(leader);
         project.setTeamMembers(teamMembers);
         
+        // 5. Auto-assign to active period
+        periodRepository.findByIsActiveTrue().ifPresent(project::setPeriod);
+        
         Project saved = projectRepository.save(project);
         
         // Publish audit event
@@ -74,6 +79,12 @@ public class ProjectService {
     
     public List<ProjectResponse> getAllProjects() {
         return projectRepository.findAll().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<ProjectResponse> getProjectsByPeriod(String periodId) {
+        return projectRepository.findByPeriodId(periodId).stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }

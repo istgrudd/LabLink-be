@@ -30,7 +30,11 @@ public class ProjectController {
     // ========== READ ==========
     
     @GetMapping
-    public ResponseEntity<List<ProjectResponse>> getAllProjects() {
+    public ResponseEntity<List<ProjectResponse>> getAllProjects(
+            @RequestParam(required = false) String periodId) {
+        if (periodId != null && !periodId.isBlank()) {
+            return ResponseEntity.ok(projectService.getProjectsByPeriod(periodId));
+        }
         return ResponseEntity.ok(projectService.getAllProjects());
     }
 

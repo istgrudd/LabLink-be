@@ -26,7 +26,11 @@ public class LetterController {
 
     @GetMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<LetterResponse>> getAllLetters() {
+    public ResponseEntity<List<LetterResponse>> getAllLetters(
+            @RequestParam(required = false) String periodId) {
+        if (periodId != null && !periodId.isBlank()) {
+            return ResponseEntity.ok(letterService.getLettersByPeriod(periodId));
+        }
         return ResponseEntity.ok(letterService.getAllLetters());
     }
 
