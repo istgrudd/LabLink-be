@@ -1,0 +1,21 @@
+# ========================================
+# JWT Configuration (SENSITIVE - LOCAL ONLY!)
+# ========================================
+# IMPORTANT: This file is gitignored and should NEVER be committed!
+# Copy this file to 'application-local.properties' for local development
+
+# JWT Secret Key (Base64 encoded)
+# Generate a strong secret with: openssl rand -base64 64
+jwt.secret=bXliY2xhYi1sYWJsaW5rLXNlY3JldC1rZXktdGhpcy1pcy1qdXN0LWZvci1kZXZlbG9wbWVudC1wdXJwb3Nlcy1vbmx5LXBsZWFzZS1jaGFuZ2UtaW4tcHJvZHVjdGlvbg==
+
+# JWT Expiration (in milliseconds)
+# 86400000 ms = 24 hours
+jwt.expiration=86400000
+
+# ========================================
+# Database Configuration (if needed)
+# ========================================
+# Configure your local database credentials here
+spring.datasource.url=jdbc:postgresql://localhost:5432/db_lablink
+spring.datasource.username=postgres
+spring.datasource.password=your_password_here

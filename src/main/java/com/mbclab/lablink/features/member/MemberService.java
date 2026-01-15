@@ -124,12 +124,19 @@ public class MemberService {
         String name = member.getFullName();
         String nim = member.getUsername();
         
-        memberRepository.deleteById(id);
-        
-        // Publish audit event
-        eventPublisher.publishEvent(AuditEvent.delete(
-                "MEMBER", id, name,
-                "Deleted member: " + nim));
+        try {
+            memberRepository.deleteById(id);
+            
+            // Publish audit event
+            eventPublisher.publishEvent(AuditEvent.delete(
+                    "MEMBER", id, name,
+                    "Deleted member: " + nim));
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new RuntimeException(
+                "Tidak dapat menghapus member " + name + " karena masih terdaftar sebagai ketua proyek atau terlibat dalam data lain. " +
+                "Harap hapus atau ubah ketua proyek terlebih dahulu."
+            );
+        }
     }
 
     // ========== HELPER: Convert to Response DTO ==========
