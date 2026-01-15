@@ -28,9 +28,9 @@ build/
 # Logs
 *.log
 
-# Sensitive Configuration (LOCAL ONLY - NEVER COMMIT!)
-application-local.properties
-src/main/resources/application-local.properties
+# Sensitive Configuration (DEV PROFILE - NEVER COMMIT!)
+application-dev.properties
+src/main/resources/application-dev.properties
 
 # ==================================
 # ⚛️ FRONTEND (NEXT.JS & NODE) - WAJIB ADA!
