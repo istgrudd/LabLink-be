@@ -1,5 +1,6 @@
 package com.mbclab.lablink.features.auth;
 
+import com.mbclab.lablink.features.auth.dto.ChangePasswordRequest;
 import com.mbclab.lablink.features.auth.dto.LoginRequest;
 import com.mbclab.lablink.features.auth.dto.LoginResponse;
 import com.mbclab.lablink.features.member.MemberRepository;
@@ -57,5 +58,26 @@ public class AuthService {
         }
         
         return user;
+    }
+    
+    public void changePassword(String username, ChangePasswordRequest request) {
+        // 1. Find user
+        ResearchAssistant user = memberRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User tidak ditemukan"));
+        
+        // 2. Verify current password
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new RuntimeException("Password saat ini salah");
+        }
+        
+        // 3. Validate new password
+        if (request.getNewPassword() == null || request.getNewPassword().length() < 6) {
+            throw new RuntimeException("Password baru minimal 6 karakter");
+        }
+        
+        // 4. Update password
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setPasswordChanged(true);
+        memberRepository.save(user);
     }
 }

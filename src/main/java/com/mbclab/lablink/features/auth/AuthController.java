@@ -1,5 +1,6 @@
 package com.mbclab.lablink.features.auth;
 
+import com.mbclab.lablink.features.auth.dto.ChangePasswordRequest;
 import com.mbclab.lablink.features.auth.dto.LoginRequest;
 import com.mbclab.lablink.features.auth.dto.LoginResponse;
 import lombok.RequiredArgsConstructor;
@@ -36,5 +37,21 @@ public class AuthController {
                 .role(user.getRole())
                 .isPasswordChanged(user.isPasswordChanged())
                 .build());
+    }
+    
+    @PutMapping("/change-password")
+    public ResponseEntity<?> changePassword(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody ChangePasswordRequest request) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new RuntimeException("Token tidak valid");
+        }
+        
+        String token = authHeader.substring(7);
+        var user = authService.validateToken(token);
+        
+        authService.changePassword(user.getUsername(), request);
+        
+        return ResponseEntity.ok(java.util.Map.of("message", "Password berhasil diubah"));
     }
 }
