@@ -32,35 +32,13 @@ public class SecurityConfig {
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        
-        // --- BAGIAN INI YANG DIUBAH ---
-        // Masukkan URL Vercel Anda di sini. 
-        // Pastikan TIDAK ada garis miring '/' di akhir URL.
-        configuration.setAllowedOrigins(List.of(
-            "http://localhost:3000",
-            "https://lablink-fe.vercel.app" // <-- Pastikan ini sesuai dengan domain Vercel Anda
-        ));
-        
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
-        
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
-
-    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints (Login & Register)
                 .requestMatchers("/api/auth/**").permitAll()
-                
+
                 // Izinkan akses ke folder Uploads (PENTING biar gambar muncul)
                 .requestMatchers("/uploads/**").permitAll()
                 
