@@ -18,11 +18,15 @@ public class EventCommittee {
     @EmbeddedId
     private EventCommitteeId id;
 
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
     @ManyToOne(fetch = FetchType.LAZY)
     @MapsId("eventId")
     @JoinColumn(name = "event_id")
     private Event event;
 
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
     @ManyToOne(fetch = FetchType.LAZY)
     @MapsId("memberId")
     @JoinColumn(name = "member_id")

@@ -23,6 +23,7 @@ public class EventService {
     private final MemberRepository memberRepository;
     private final EventCodeGenerator eventCodeGenerator;
     private final AcademicPeriodRepository periodRepository;
+    private final com.mbclab.lablink.features.archive.ArchiveRepository archiveRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     // ========== CREATE ==========
@@ -108,10 +109,26 @@ public class EventService {
         if (request.getStatus() != null && !request.getStatus().isBlank()) {
             event.setStatus(request.getStatus().toUpperCase());
         }
+        // Update PIC
         if (request.getPicId() != null && !request.getPicId().isBlank()) {
             ResearchAssistant pic = memberRepository.findById(request.getPicId())
                     .orElseThrow(() -> new RuntimeException("PIC tidak ditemukan"));
             event.setPic(pic);
+        }
+
+        // Update Committee (Replace All)
+        if (request.getCommittee() != null) {
+            // Clear existing
+            event.getCommittee().clear();
+            
+            // Add new
+            for (UpdateEventRequest.CommitteeMemberRequest cmd : request.getCommittee()) {
+                ResearchAssistant member = memberRepository.findById(cmd.getMemberId())
+                        .orElseThrow(() -> new RuntimeException("Member " + cmd.getMemberId() + " tidak ditemukan"));
+                
+                EventCommittee committee = new EventCommittee(event, member, cmd.getRole());
+                event.getCommittee().add(committee);
+            }
         }
         
         Event saved = eventRepository.save(event);
@@ -132,6 +149,11 @@ public class EventService {
                 .orElseThrow(() -> new RuntimeException("Event tidak ditemukan"));
         String eventName = event.getName();
         String eventCode = event.getEventCode();
+        
+        // Check for archives
+        if (!archiveRepository.findByEventId(id).isEmpty()) {
+            throw new RuntimeException("Gagal menghapus: Event ini memiliki arsip (laporan/sertifikat) yang terhubung. Hapus arsip terkait terlebih dahulu.");
+        }
         
         eventRepository.deleteById(id);
         

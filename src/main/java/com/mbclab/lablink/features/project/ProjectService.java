@@ -26,6 +26,7 @@ public class ProjectService {
     private final MemberRepository memberRepository;
     private final ProjectCodeGenerator projectCodeGenerator;
     private final AcademicPeriodRepository periodRepository;
+    private final com.mbclab.lablink.features.archive.ArchiveRepository archiveRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     // ========== CREATE ==========
@@ -169,6 +170,11 @@ public class ProjectService {
                 .orElseThrow(() -> new RuntimeException("Project tidak ditemukan"));
         String projectName = project.getName();
         String projectCode = project.getProjectCode();
+        
+        // Check for dependencies
+        if (!archiveRepository.findByProjectId(id).isEmpty()) {
+            throw new RuntimeException("Gagal menghapus: Proyek ini memiliki arsip (dokumen/publikasi) yang terhubung. Hapus arsip terkait terlebih dahulu.");
+        }
         
         projectRepository.deleteById(id);
         

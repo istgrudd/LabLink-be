@@ -12,4 +12,11 @@ public class UpdateEventRequest {
     private LocalDate endDate;
     private String status;  // PLANNED, ONGOING, COMPLETED, CANCELLED
     private String picId;
+    private java.util.List<CommitteeMemberRequest> committee;
+    
+    @Data
+    public static class CommitteeMemberRequest {
+        private String memberId;
+        private String role;
+    }
 }

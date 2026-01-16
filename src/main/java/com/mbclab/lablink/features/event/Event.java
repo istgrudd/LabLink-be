@@ -46,6 +46,8 @@ public class Event extends BaseEntity {
     private ResearchAssistant pic;
 
     // Committee members (dengan role)
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<EventCommittee> committee = new HashSet<>();
 }
