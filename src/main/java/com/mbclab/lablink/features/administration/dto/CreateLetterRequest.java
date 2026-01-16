@@ -12,7 +12,13 @@ public class CreateLetterRequest {
     private String recipient;     // Tujuan
     private String content;       // Isi surat (optional)
     private String attachment;    // Lampiran (optional)
-    private LocalDate issueDate;  // Tanggal surat
-    private String eventId;       // Optional: Link ke Event
-    private String createdBy;     // Pembuat surat
+    
+    // Event terkait (for nama_kegiatan)
+    private String eventId;
+    
+    // Borrow date/time (for PMJ letters)
+    private LocalDate borrowDate;
+    private LocalDate borrowReturnDate;
+    
+    // Requester info is auto-filled from logged-in user, not from request
 }

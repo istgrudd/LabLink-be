@@ -23,9 +23,24 @@ public class LetterResponse extends BaseResponse {
     private String recipient;
     private String content;
     private String attachment;
-    private LocalDate issueDate;
+    
+    // Requester info
+    private String requesterName;
+    private String requesterNim;
+    
+    // Borrow date/return date
+    private LocalDate borrowDate;
+    private LocalDate borrowReturnDate;
+    
+    // Dates
+    private LocalDate issueDate;  // Set on approval
+    
+    // Status: PENDING, APPROVED, REJECTED, DOWNLOADED
     private String status;
-    private String createdBy;
+    
+    // Approval info
+    private String approvedBy;
+    private String rejectionReason;
     
     // Event info (if linked)
     private EventSummary event;

@@ -3,10 +3,13 @@ package com.mbclab.lablink.features.administration;
 import com.mbclab.lablink.features.activitylog.AuditEvent;
 import com.mbclab.lablink.features.event.Event;
 import com.mbclab.lablink.features.event.EventRepository;
+import com.mbclab.lablink.features.member.ResearchAssistant;
+import com.mbclab.lablink.features.member.MemberRepository;
 import com.mbclab.lablink.features.period.AcademicPeriodRepository;
 import com.mbclab.lablink.features.administration.dto.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +25,7 @@ public class LetterService {
     private final LetterRepository letterRepository;
     private final IncomingLetterRepository incomingLetterRepository;
     private final EventRepository eventRepository;
+    private final MemberRepository memberRepository;
     private final LetterNumberGenerator letterNumberGenerator;
     private final AcademicPeriodRepository periodRepository;
     private final ApplicationEventPublisher eventPublisher;
@@ -30,27 +34,32 @@ public class LetterService {
     
     @Transactional
     public LetterResponse createLetter(CreateLetterRequest request) {
-        LocalDate issueDate = request.getIssueDate() != null 
-                ? request.getIssueDate() 
-                : LocalDate.now();
+        // Get current user
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
         
-        // Generate letter number
-        String letterNumber = letterNumberGenerator.generate(
-                request.getLetterType(),
-                request.getCategory(),
-                issueDate);
+        // Try to find requester in member table, but allow non-members (like admin) to also create letters
+        ResearchAssistant requester = memberRepository.findByUsername(username).orElse(null);
         
         Letter letter = new Letter();
-        letter.setLetterNumber(letterNumber);
+        // letterNumber will be generated on approval
         letter.setLetterType(request.getLetterType().toUpperCase());
         letter.setCategory(request.getCategory().toUpperCase());
         letter.setSubject(request.getSubject());
         letter.setRecipient(request.getRecipient());
         letter.setContent(request.getContent());
         letter.setAttachment(request.getAttachment());
-        letter.setIssueDate(issueDate);
-        letter.setStatus("DRAFT");
-        letter.setCreatedBy(request.getCreatedBy());
+        
+        // Requester info from logged-in user (or fallback to username)
+        letter.setRequester(requester);
+        letter.setRequesterName(requester != null ? requester.getFullName() : username);
+        letter.setRequesterNim(requester != null ? requester.getUsername() : username);
+        
+        // Borrow date/time
+        letter.setBorrowDate(request.getBorrowDate());
+        letter.setBorrowReturnDate(request.getBorrowReturnDate());
+        
+        // Status = PENDING (waiting for approval)
+        letter.setStatus("PENDING");
         
         // Link to event if provided
         if (request.getEventId() != null && !request.getEventId().isBlank()) {
@@ -67,7 +76,66 @@ public class LetterService {
         // Publish audit event
         eventPublisher.publishEvent(AuditEvent.create(
                 "LETTER", saved.getId(), saved.getSubject(),
-                "Created letter: " + saved.getLetterNumber()));
+                "Created letter request by: " + (requester != null ? requester.getFullName() : username)));
+        
+        return toResponse(saved);
+    }
+
+    @Transactional
+    public LetterResponse approveLetter(String id) {
+        Letter letter = letterRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Surat tidak ditemukan"));
+        
+        if (!"PENDING".equals(letter.getStatus())) {
+            throw new RuntimeException("Hanya surat dengan status PENDING yang bisa disetujui");
+        }
+        
+        // Set issue date = today (tanggal surat = tanggal disetujui)
+        LocalDate issueDate = LocalDate.now();
+        letter.setIssueDate(issueDate);
+        
+        // Generate letter number on approval
+        String letterNumber = letterNumberGenerator.generate(
+                letter.getLetterType(),
+                letter.getCategory(),
+                issueDate);
+        letter.setLetterNumber(letterNumber);
+        
+        // Set approved
+        letter.setStatus("APPROVED");
+        String approver = SecurityContextHolder.getContext().getAuthentication().getName();
+        letter.setApprovedBy(approver);
+        
+        Letter saved = letterRepository.save(letter);
+        
+        // Publish audit event
+        eventPublisher.publishEvent(AuditEvent.update(
+                "LETTER", saved.getId(), saved.getSubject(),
+                "Approved letter: " + letterNumber + " by " + approver));
+        
+        return toResponse(saved);
+    }
+
+    @Transactional
+    public LetterResponse rejectLetter(String id, String reason) {
+        Letter letter = letterRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Surat tidak ditemukan"));
+        
+        if (!"PENDING".equals(letter.getStatus())) {
+            throw new RuntimeException("Hanya surat dengan status PENDING yang bisa ditolak");
+        }
+        
+        letter.setStatus("REJECTED");
+        letter.setRejectionReason(reason);
+        String approver = SecurityContextHolder.getContext().getAuthentication().getName();
+        letter.setApprovedBy(approver);
+        
+        Letter saved = letterRepository.save(letter);
+        
+        // Publish audit event
+        eventPublisher.publishEvent(AuditEvent.update(
+                "LETTER", saved.getId(), saved.getSubject(),
+                "Rejected letter by " + approver + ": " + reason));
         
         return toResponse(saved);
     }
@@ -97,21 +165,6 @@ public class LetterService {
     }
 
     @Transactional
-    public LetterResponse updateStatus(String id, String status) {
-        Letter letter = letterRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Surat tidak ditemukan"));
-        letter.setStatus(status.toUpperCase());
-        Letter saved = letterRepository.save(letter);
-        
-        // Publish audit event
-        eventPublisher.publishEvent(AuditEvent.update(
-                "LETTER", saved.getId(), saved.getSubject(),
-                "Updated letter status to: " + status));
-        
-        return toResponse(saved);
-    }
-
-    @Transactional
     public void deleteLetter(String id) {
         Letter letter = letterRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Surat tidak ditemukan"));
@@ -123,7 +176,7 @@ public class LetterService {
         // Publish audit event
         eventPublisher.publishEvent(AuditEvent.delete(
                 "LETTER", id, subject,
-                "Deleted letter: " + number));
+                "Deleted letter: " + (number != null ? number : "pending")));
     }
 
     // ==================== SURAT MASUK ====================
@@ -184,9 +237,14 @@ public class LetterService {
                 .recipient(letter.getRecipient())
                 .content(letter.getContent())
                 .attachment(letter.getAttachment())
+                .requesterName(letter.getRequesterName())
+                .requesterNim(letter.getRequesterNim())
+                .borrowDate(letter.getBorrowDate())
+                .borrowReturnDate(letter.getBorrowReturnDate())
                 .issueDate(letter.getIssueDate())
                 .status(letter.getStatus())
-                .createdBy(letter.getCreatedBy())
+                .approvedBy(letter.getApprovedBy())
+                .rejectionReason(letter.getRejectionReason())
                 .event(eventSummary)
                 .createdAt(letter.getCreatedAt())
                 .updatedAt(letter.getUpdatedAt())

@@ -44,6 +44,9 @@ public class LetterDocumentGenerator {
      * @param data Map berisi data untuk mengisi placeholder
      * @return ByteArrayOutputStream berisi dokumen Word
      */
+
+
+    
     public byte[] generateDocument(
             String templateName,
             String letterType,
@@ -97,13 +100,18 @@ public class LetterDocumentGenerator {
         for (XWPFRun run : paragraph.getRuns()) {
             String text = run.getText(0);
             if (text != null) {
-                // Replace built-in placeholders
-                text = text.replace("{{NOMOR_SURAT}}", letterNumber);
-                text = text.replace("{{TANGGAL}}", formattedDate);
+                // Replace built-in placeholders (${...} format)
+                text = text.replace("${nomor_surat}", letterNumber);
+                text = text.replace("${tanggal_surat}", formattedDate);
+                text = text.replace("${nama_pemohon}", data.get("nama_pemohon"));
+                text = text.replace("${nim_pemohon}", data.get("nim_pemohon"));
+                text = text.replace("${waktu_mulai}", data.get("waktu_mulai"));
+                text = text.replace("${waktu_selesai}", data.get("waktu_selesai"));
+                text = text.replace("${nama_kegiatan}", data.get("nama_kegiatan"));
                 
                 // Replace custom placeholders from data map
                 for (Map.Entry<String, String> entry : data.entrySet()) {
-                    String placeholder = "{{" + entry.getKey().toUpperCase() + "}}";
+                    String placeholder = "${" + entry.getKey().toLowerCase() + "}";
                     String value = entry.getValue() != null ? entry.getValue() : "";
                     text = text.replace(placeholder, value);
                 }
@@ -118,6 +126,7 @@ public class LetterDocumentGenerator {
      */
     public String[] getAvailableTemplates() {
         return new String[]{
+            "Surat Peminjaman Videotron MBC",
             "surat_peminjaman",
             "surat_undangan",
             "surat_perizinan",

@@ -1,6 +1,7 @@
 package com.mbclab.lablink.features.administration;
 
 import com.mbclab.lablink.features.event.Event;
+import com.mbclab.lablink.features.member.ResearchAssistant;
 import com.mbclab.lablink.features.period.AcademicPeriod;
 import com.mbclab.lablink.shared.BaseEntity;
 import jakarta.persistence.*;
@@ -10,15 +11,10 @@ import lombok.EqualsAndHashCode;
 import java.time.LocalDate;
 
 /**
- * Entity untuk Surat Keluar.
+ * Entity untuk Surat Keluar dengan Workflow Approval.
  * 
  * Format Nomor: 001/PMJ/EXT/MBC/XII/2025
- * - 001: Nomor urut
- * - PMJ: Jenis surat (PMJ, IZN, STF, SP, UND)
- * - EXT: Kategori (RK, INT, EXT, WSH)
- * - MBC: Organisasi
- * - XII: Bulan (Romawi)
- * - 2025: Tahun
+ * Status Flow: PENDING -> APPROVED/REJECTED -> DOWNLOADED
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -26,8 +22,9 @@ import java.time.LocalDate;
 @Table(name = "letters")
 public class Letter extends BaseEntity {
 
-    @Column(unique = true, nullable = false)
-    private String letterNumber;  // Auto-generated: 001/PMJ/EXT/MBC/I/2026
+    // Generated on approval (nullable until approved)
+    @Column(unique = true)
+    private String letterNumber;
 
     // Jenis Surat: PMJ, IZN, STF, SP, UND
     @Column(nullable = false)
@@ -46,24 +43,38 @@ public class Letter extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String content;  // Isi surat (optional)
 
-    @Column(nullable = false)
-    private LocalDate issueDate;
-
     private String attachment;  // Lampiran
 
-    // Status: DRAFT, SENT
-    private String status = "DRAFT";
+    // ==== REQUESTER INFO (auto-filled from user) ====
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "requester_id")
+    private ResearchAssistant requester;
+
+    private String requesterName;  // From user.fullName
+    private String requesterNim;   // From user.username
+
+    // ==== BORROW DATE/TIME (for PMJ letters) ====
+    private LocalDate borrowDate;
+    private LocalDate borrowReturnDate;
+
+    // ==== DATES ====
+    // issueDate set on APPROVAL (tanggal surat = tanggal disetujui)
+    private LocalDate issueDate;
+    
+    // ==== STATUS: PENDING, APPROVED, REJECTED, DOWNLOADED ====
+    private String status = "PENDING";
 
     // Periode kepengurusan
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "period_id")
     private AcademicPeriod period;
 
-    // Optional: Link ke Event terkait
+    // Link ke Event terkait (required for context)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id")
     private Event event;
 
-    // Siapa yang membuat
-    private String createdBy;
+    // Who approved/rejected
+    private String approvedBy;
+    private String rejectionReason;
 }
