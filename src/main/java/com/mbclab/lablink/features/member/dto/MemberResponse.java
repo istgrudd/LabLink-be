@@ -30,5 +30,7 @@ public class MemberResponse extends BaseResponse {
     private String socialMediaLink;
     
     private boolean isActive;
+    
+    @com.fasterxml.jackson.annotation.JsonProperty("isPasswordChanged")
     private boolean isPasswordChanged;
 }

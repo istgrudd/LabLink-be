@@ -23,6 +23,7 @@ public class LoginResponse {
         private String username;
         private String fullName;
         private String role;
+        @com.fasterxml.jackson.annotation.JsonProperty("isPasswordChanged")
         private boolean isPasswordChanged;
     }
 }
