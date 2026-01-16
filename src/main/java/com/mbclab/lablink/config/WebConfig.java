@@ -35,7 +35,7 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addMapping("/**") // Izinkan semua endpoint
                 .allowedOrigins(
                     "http://localhost:3000", // Biar di laptop tetap jalan
-                    "https://lablink-frontend.vercel.app", // Ganti dengan domain Vercel kamu nanti
+                    "https://lablink-fe.vercel.app", // Ganti dengan domain Vercel kamu nanti
                     "*" // ATAU pakai bintang dulu buat testing sementara (Hati-hati, ini membuka ke semua orang)
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
