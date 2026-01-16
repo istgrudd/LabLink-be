@@ -1,6 +1,8 @@
 package com.mbclab.lablink.features.period;
 
 import com.mbclab.lablink.features.activitylog.AuditEvent;
+import com.mbclab.lablink.features.administration.LetterRepository;
+import com.mbclab.lablink.features.archive.ArchiveRepository;
 import com.mbclab.lablink.features.member.MemberRepository;
 import com.mbclab.lablink.features.member.ResearchAssistant;
 import com.mbclab.lablink.features.period.dto.*;
@@ -25,6 +27,8 @@ public class PeriodService {
     private final MemberRepository memberRepository;
     private final ProjectRepository projectRepository;
     private final EventRepository eventRepository;
+    private final ArchiveRepository archiveRepository;
+    private final LetterRepository letterRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     // ========== CREATE ==========
@@ -144,6 +148,41 @@ public class PeriodService {
                 "Closed and archived period: " + oldPeriod.getCode()));
         
         return toResponse(oldPeriod);
+    }
+
+    // ========== DELETE PERIOD ==========
+    
+    @Transactional
+    public void deletePeriod(String id) {
+        AcademicPeriod period = periodRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Periode tidak ditemukan"));
+        
+        if (period.isActive()) {
+            throw new RuntimeException("Tidak bisa menghapus periode yang sedang aktif. Tetapkan periode lain sebagai aktif terlebih dahulu.");
+        }
+        
+        // 1. Delete all member-period associations
+        List<MemberPeriod> memberPeriods = memberPeriodRepository.findByPeriodId(id);
+        memberPeriodRepository.deleteAll(memberPeriods);
+        
+        // 2. Delete all archives in this period (must be before projects/events due to FK)
+        archiveRepository.deleteByPeriodId(id);
+        
+        // 3. Delete all letters in this period
+        letterRepository.deleteByPeriodId(id);
+        
+        // 4. Delete all projects in this period
+        projectRepository.deleteByPeriodId(id);
+        
+        // 5. Delete all events in this period
+        eventRepository.deleteByPeriodId(id);
+        
+        // 6. Delete the period itself
+        periodRepository.delete(period);
+        
+        eventPublisher.publishEvent(AuditEvent.delete(
+                "PERIOD", period.getId(), period.getName(),
+                "Deleted period with cascade: " + period.getCode()));
     }
 
     // ========== MEMBER MANAGEMENT ==========

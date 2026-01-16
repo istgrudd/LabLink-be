@@ -57,6 +57,13 @@ public class PeriodController {
         return ResponseEntity.ok(periodService.closePeriod(id, request));
     }
 
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deletePeriod(@PathVariable String id) {
+        periodService.deletePeriod(id);
+        return ResponseEntity.noContent().build();
+    }
+
     // ========== MEMBER MANAGEMENT ==========
     
     @PostMapping("/{id}/members")

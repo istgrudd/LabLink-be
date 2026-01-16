@@ -74,6 +74,12 @@ public class EventService {
                 .collect(Collectors.toList());
     }
 
+    public List<EventResponse> getOrphanEvents() {
+        return eventRepository.findByPeriodIsNull().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
     public EventResponse getEventById(String id) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Event tidak ditemukan"));
@@ -155,7 +161,13 @@ public class EventService {
             throw new RuntimeException("Gagal menghapus: Event ini memiliki arsip (laporan/sertifikat) yang terhubung. Hapus arsip terkait terlebih dahulu.");
         }
         
-        eventRepository.deleteById(id);
+        // Manually clear committee to ensure orphan removal works
+        event.getCommittee().clear();
+        eventRepository.saveAndFlush(event);
+        
+        // Delete event
+        eventRepository.delete(event);
+        eventRepository.flush(); // Force commit
         
         // Publish audit event
         eventPublisher.publishEvent(AuditEvent.delete(

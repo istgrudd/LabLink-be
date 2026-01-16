@@ -4,6 +4,10 @@ import com.mbclab.lablink.features.activitylog.AuditEvent;
 import com.mbclab.lablink.features.member.dto.CreateMemberRequest;
 import com.mbclab.lablink.features.member.dto.MemberResponse;
 import com.mbclab.lablink.features.member.dto.UpdateMemberRequest;
+import com.mbclab.lablink.features.period.AcademicPeriod;
+import com.mbclab.lablink.features.period.AcademicPeriodRepository;
+import com.mbclab.lablink.features.period.MemberPeriod;
+import com.mbclab.lablink.features.period.MemberPeriodRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -12,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -20,6 +25,8 @@ import java.util.stream.Collectors;
 public class MemberService {
 
     private final MemberRepository memberRepository;
+    private final AcademicPeriodRepository periodRepository;
+    private final MemberPeriodRepository memberPeriodRepository;
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -53,8 +60,15 @@ public class MemberService {
         newMember.setExpertDivision(request.getExpertDivision());
         newMember.setDepartment(request.getDepartment());
         
-        // 6. Simpan dan return response
+        // 6. Simpan member
         ResearchAssistant saved = memberRepository.save(newMember);
+        
+        // 7. Auto-associate dengan active period jika ada
+        Optional<AcademicPeriod> activePeriod = periodRepository.findByIsActiveTrue();
+        if (activePeriod.isPresent()) {
+            MemberPeriod mp = new MemberPeriod(saved, activePeriod.get(), request.getPosition());
+            memberPeriodRepository.save(mp);
+        }
         
         // Publish audit event
         eventPublisher.publishEvent(AuditEvent.create(
@@ -82,6 +96,20 @@ public class MemberService {
         ResearchAssistant member = memberRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Member tidak ditemukan"));
         return toResponse(member);
+    }
+
+    public List<MemberResponse> getOrphanMembers() {
+        // Get all member IDs that are in at least one period
+        List<String> memberIdsInPeriods = memberPeriodRepository.findAll().stream()
+                .map(mp -> mp.getMember().getId())
+                .distinct()
+                .collect(Collectors.toList());
+        
+        // Get all members not in that list
+        return memberRepository.findAll().stream()
+                .filter(m -> !memberIdsInPeriods.contains(m.getId()))
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     // ========== UPDATE ==========

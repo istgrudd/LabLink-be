@@ -48,6 +48,8 @@ public class EventController {
         return ResponseEntity.ok(eventService.getEventByCode(eventCode));
     }
 
+
+
     // ========== UPDATE ==========
     
     @PutMapping("/{id}")

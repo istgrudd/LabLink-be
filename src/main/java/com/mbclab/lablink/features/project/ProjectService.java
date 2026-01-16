@@ -90,6 +90,12 @@ public class ProjectService {
                 .collect(Collectors.toList());
     }
 
+    public List<ProjectResponse> getOrphanProjects() {
+        return projectRepository.findByPeriodIsNull().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
     public ProjectResponse getProjectById(String id) {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Project tidak ditemukan"));
@@ -176,7 +182,13 @@ public class ProjectService {
             throw new RuntimeException("Gagal menghapus: Proyek ini memiliki arsip (dokumen/publikasi) yang terhubung. Hapus arsip terkait terlebih dahulu.");
         }
         
-        projectRepository.deleteById(id);
+        // Manually clear team members to update join table
+        project.getTeamMembers().clear();
+        projectRepository.saveAndFlush(project);
+        
+        // Delete project
+        projectRepository.delete(project);
+        projectRepository.flush();
         
         // Publish audit event
         eventPublisher.publishEvent(AuditEvent.delete(

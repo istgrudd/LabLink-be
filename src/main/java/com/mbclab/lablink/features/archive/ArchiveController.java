@@ -66,6 +66,8 @@ public class ArchiveController {
         return ResponseEntity.ok(archiveService.getArchivesByDepartment(department));
     }
 
+
+
     // ========== UPDATE ==========
     
     @PutMapping("/{id}")

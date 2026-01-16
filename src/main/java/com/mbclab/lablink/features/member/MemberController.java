@@ -47,6 +47,8 @@ public class MemberController {
         return ResponseEntity.ok(memberService.getMemberByNim(nim));
     }
 
+
+
     // ========== UPDATE ==========
     
     @PutMapping("/{id}")

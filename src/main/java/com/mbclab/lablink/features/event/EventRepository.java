@@ -12,4 +12,11 @@ public interface EventRepository extends JpaRepository<Event, String> {
     List<Event> findByPeriodId(String periodId);
     long countByEventCodeStartingWith(String prefix);
     int countByPeriodId(String periodId);
+    
+    // For cascade delete
+    // For cascade delete
+    void deleteByPeriodId(String periodId);
+
+    // For orphan filter
+    List<Event> findByPeriodIsNull();
 }

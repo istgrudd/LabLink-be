@@ -110,6 +110,12 @@ public class ArchiveService {
                 .collect(Collectors.toList());
     }
 
+    public List<ArchiveResponse> getOrphanArchives() {
+        return archiveRepository.findByPeriodIsNull().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
     public ArchiveResponse getArchiveById(String id) {
         Archive archive = archiveRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Archive tidak ditemukan"));
@@ -183,7 +189,8 @@ public class ArchiveService {
         String title = archive.getTitle();
         String code = archive.getArchiveCode();
         
-        archiveRepository.deleteById(id);
+        archiveRepository.delete(archive);
+        archiveRepository.flush();
         
         // Publish audit event
         eventPublisher.publishEvent(AuditEvent.delete(

@@ -21,4 +21,11 @@ public interface ProjectRepository extends JpaRepository<Project, String> {
     
     // Untuk period summary
     int countByPeriodId(String periodId);
+    
+    // For cascade delete
+    // For cascade delete
+    void deleteByPeriodId(String periodId);
+    
+    // For orphan filter
+    List<Project> findByPeriodIsNull();
 }

@@ -19,4 +19,7 @@ public interface LetterRepository extends JpaRepository<Letter, String> {
     @Query("SELECT COUNT(l) FROM Letter l WHERE l.letterType = ?1 AND l.category = ?2 " +
            "AND YEAR(l.issueDate) = ?3 AND MONTH(l.issueDate) = ?4")
     long countByTypeAndCategoryAndYearAndMonth(String letterType, String category, int year, int month);
+    
+    // For cascade delete
+    void deleteByPeriodId(String periodId);
 }

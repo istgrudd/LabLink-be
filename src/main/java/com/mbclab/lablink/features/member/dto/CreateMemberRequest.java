@@ -10,4 +10,5 @@ public class CreateMemberRequest {
     private String expertDivision; // Misal: Big Data, Cyber Security
     private String department;     // Misal: Informatika
     private String role;           // Optional: ADMIN, ASSISTANT (default: ASSISTANT)
+    private String position;       // Jabatan dalam periode (Anggota, Koordinator, dll)
 }

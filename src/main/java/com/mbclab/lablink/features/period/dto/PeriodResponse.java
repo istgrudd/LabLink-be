@@ -1,5 +1,6 @@
 package com.mbclab.lablink.features.period.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mbclab.lablink.shared.BaseResponse;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -19,8 +20,13 @@ public class PeriodResponse extends BaseResponse {
     private String name;
     private LocalDate startDate;
     private LocalDate endDate;
+    
+    @JsonProperty("isActive")
     private boolean isActive;
+    
+    @JsonProperty("isArchived")
     private boolean isArchived;
+    
     private int totalMembers;
     private int totalProjects;
     private int totalEvents;
