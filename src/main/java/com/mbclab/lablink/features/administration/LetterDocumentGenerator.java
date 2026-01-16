@@ -127,7 +127,7 @@ public class LetterDocumentGenerator {
                 if (!paragraph.getRuns().isEmpty()) {
                     XWPFRun first = paragraph.getRuns().get(0);
                     if (first.getFontFamily() != null) fontFamily = first.getFontFamily();
-                    if (first.getFontSize() != -1) fontSize = first.getFontSize();
+                    if (first.getFontSizeAsDouble() != null) fontSize = first.getFontSizeAsDouble();
                     isBold = first.isBold();
                     isItalic = first.isItalic();
                 }
