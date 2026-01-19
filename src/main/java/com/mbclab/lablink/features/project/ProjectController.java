@@ -116,7 +116,7 @@ public class ProjectController {
     }
     
     @PostMapping("/{id}/approve")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RESEARCH_COORD', 'DIVISION_HEAD')")
     public ResponseEntity<ProjectResponse> approveProject(
             @PathVariable String id,
             Authentication authentication) {
@@ -126,7 +126,7 @@ public class ProjectController {
     }
     
     @PostMapping("/{id}/reject")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RESEARCH_COORD', 'DIVISION_HEAD')")
     public ResponseEntity<ProjectResponse> rejectProject(
             @PathVariable String id,
             @RequestBody RejectProjectRequest request,

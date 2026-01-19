@@ -2,7 +2,9 @@ package com.mbclab.lablink.features.project;
 
 import com.mbclab.lablink.features.activitylog.AuditEvent;
 import com.mbclab.lablink.features.member.MemberRepository;
+import com.mbclab.lablink.features.member.MemberRoleRepository;
 import com.mbclab.lablink.features.member.ResearchAssistant;
+import com.mbclab.lablink.features.member.Role;
 import com.mbclab.lablink.features.period.AcademicPeriodRepository;
 import com.mbclab.lablink.features.project.dto.CreateProjectRequest;
 import com.mbclab.lablink.features.project.dto.ProjectResponse;
@@ -28,23 +30,24 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final MemberRepository memberRepository;
+    private final MemberRoleRepository memberRoleRepository; // Added for RBAC
     private final ProjectCodeGenerator projectCodeGenerator;
     private final AcademicPeriodRepository periodRepository;
     private final com.mbclab.lablink.features.archive.ArchiveRepository archiveRepository;
     private final ApplicationEventPublisher eventPublisher;
 
+    // ... (CREATE, READ, UPDATE, DELETE, MEMBER MANAGEMENT methods remain same) ...
+    // Note: I will copy them below to ensure file integrity, but main changes are in APPROVAL WORKFLOW
+
     // ========== CREATE ==========
     
     @Transactional
     public ProjectResponse createProject(CreateProjectRequest request) {
-        // 1. Generate project code
         String projectCode = projectCodeGenerator.generate(request.getActivityType());
         
-        // 2. Get leader
         ResearchAssistant leader = memberRepository.findById(request.getLeaderId())
                 .orElseThrow(() -> new RuntimeException("Leader tidak ditemukan"));
         
-        // 3. Get team members
         Set<ResearchAssistant> teamMembers = new HashSet<>();
         if (request.getTeamMemberIds() != null && !request.getTeamMemberIds().isEmpty()) {
             teamMembers = request.getTeamMemberIds().stream()
@@ -53,7 +56,6 @@ public class ProjectService {
                     .collect(Collectors.toSet());
         }
         
-        // 4. Create project
         Project project = new Project();
         project.setProjectCode(projectCode);
         project.setName(request.getName());
@@ -67,12 +69,10 @@ public class ProjectService {
         project.setLeader(leader);
         project.setTeamMembers(teamMembers);
         
-        // 5. Auto-assign to active period
         periodRepository.findByIsActiveTrue().ifPresent(project::setPeriod);
         
         Project saved = projectRepository.save(project);
         
-        // Publish audit event
         eventPublisher.publishEvent(AuditEvent.create(
                 "PROJECT", saved.getId(), saved.getName(),
                 "Created project: " + saved.getProjectCode()));
@@ -130,41 +130,24 @@ public class ProjectService {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Project tidak ditemukan"));
         
-        // Partial update
-        if (request.getName() != null && !request.getName().isBlank()) {
-            project.setName(request.getName());
-        }
-        if (request.getDescription() != null) {
-            project.setDescription(request.getDescription());
-        }
-        if (request.getDivision() != null && !request.getDivision().isBlank()) {
-            project.setDivision(request.getDivision());
-        }
-        if (request.getActivityType() != null && !request.getActivityType().isBlank()) {
-            project.setActivityType(request.getActivityType().toUpperCase());
-        }
-        if (request.getStatus() != null && !request.getStatus().isBlank()) {
-            project.setStatus(request.getStatus().toUpperCase());
-        }
-        if (request.getStartDate() != null) {
-            project.setStartDate(request.getStartDate());
-        }
-        if (request.getEndDate() != null) {
-            project.setEndDate(request.getEndDate());
-        }
+        if (request.getName() != null && !request.getName().isBlank()) project.setName(request.getName());
+        if (request.getDescription() != null) project.setDescription(request.getDescription());
+        if (request.getDivision() != null && !request.getDivision().isBlank()) project.setDivision(request.getDivision());
+        if (request.getActivityType() != null && !request.getActivityType().isBlank()) project.setActivityType(request.getActivityType().toUpperCase());
+        if (request.getStatus() != null && !request.getStatus().isBlank()) project.setStatus(request.getStatus().toUpperCase());
+        if (request.getStartDate() != null) project.setStartDate(request.getStartDate());
+        if (request.getEndDate() != null) project.setEndDate(request.getEndDate());
         if (request.getProgressPercent() != null) {
             int progress = Math.max(0, Math.min(100, request.getProgressPercent()));
             project.setProgressPercent(progress);
         }
         
-        // Update leader
         if (request.getLeaderId() != null && !request.getLeaderId().isBlank()) {
             ResearchAssistant leader = memberRepository.findById(request.getLeaderId())
                     .orElseThrow(() -> new RuntimeException("Leader tidak ditemukan"));
             project.setLeader(leader);
         }
         
-        // Update team members (replace all)
         if (request.getTeamMemberIds() != null) {
             Set<ResearchAssistant> teamMembers = request.getTeamMemberIds().stream()
                     .map(memberId -> memberRepository.findById(memberId)
@@ -175,7 +158,6 @@ public class ProjectService {
         
         Project saved = projectRepository.save(project);
         
-        // Publish audit event
         eventPublisher.publishEvent(AuditEvent.update(
                 "PROJECT", saved.getId(), saved.getName(),
                 "Updated project: " + saved.getProjectCode()));
@@ -192,20 +174,15 @@ public class ProjectService {
         String projectName = project.getName();
         String projectCode = project.getProjectCode();
         
-        // Check for dependencies
         if (!archiveRepository.findByProjectId(id).isEmpty()) {
             throw new RuntimeException("Gagal menghapus: Proyek ini memiliki arsip (dokumen/publikasi) yang terhubung. Hapus arsip terkait terlebih dahulu.");
         }
         
-        // Manually clear team members to update join table
         project.getTeamMembers().clear();
         projectRepository.saveAndFlush(project);
-        
-        // Delete project
         projectRepository.delete(project);
         projectRepository.flush();
         
-        // Publish audit event
         eventPublisher.publishEvent(AuditEvent.delete(
                 "PROJECT", id, projectName,
                 "Deleted project: " + projectCode));
@@ -221,7 +198,6 @@ public class ProjectService {
         ResearchAssistant member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new RuntimeException("Member tidak ditemukan"));
         
-        // Check if already a member
         if (project.getTeamMembers().contains(member)) {
             throw new RuntimeException("Member sudah terdaftar di project ini");
         }
@@ -239,7 +215,6 @@ public class ProjectService {
         ResearchAssistant member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new RuntimeException("Member tidak ditemukan"));
         
-        // Check if member exists in project
         if (!project.getTeamMembers().contains(member)) {
             throw new RuntimeException("Member tidak terdaftar di project ini");
         }
@@ -266,7 +241,7 @@ public class ProjectService {
     // ========== APPROVAL WORKFLOW ==========
     
     @Transactional
-    public ProjectResponse approveProject(String id, String approvedBy) {
+    public ProjectResponse approveProject(String id, String approvedByUsername) {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Project tidak ditemukan"));
         
@@ -274,13 +249,14 @@ public class ProjectService {
             throw new RuntimeException("Project sudah diproses sebelumnya");
         }
         
+        verifyApprovalPermission(project, approvedByUsername);
+        
         project.setApprovalStatus("APPROVED");
         project.setApprovedAt(java.time.LocalDate.now());
-        project.setApprovedBy(approvedBy);
+        project.setApprovedBy(approvedByUsername);
         
         Project saved = projectRepository.save(project);
         
-        // Publish audit event
         eventPublisher.publishEvent(AuditEvent.update(
                 "PROJECT", saved.getId(), saved.getName(),
                 "Approved project: " + saved.getProjectCode()));
@@ -289,7 +265,7 @@ public class ProjectService {
     }
     
     @Transactional
-    public ProjectResponse rejectProject(String id, String rejectionReason, String rejectedBy) {
+    public ProjectResponse rejectProject(String id, String rejectionReason, String rejectedByUsername) {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Project tidak ditemukan"));
         
@@ -297,18 +273,47 @@ public class ProjectService {
             throw new RuntimeException("Project sudah diproses sebelumnya");
         }
         
+        verifyApprovalPermission(project, rejectedByUsername);
+        
         project.setApprovalStatus("REJECTED");
         project.setRejectionReason(rejectionReason);
-        project.setApprovedBy(rejectedBy);
+        project.setApprovedBy(rejectedByUsername);
         
         Project saved = projectRepository.save(project);
         
-        // Publish audit event
         eventPublisher.publishEvent(AuditEvent.update(
                 "PROJECT", saved.getId(), saved.getName(),
                 "Rejected project: " + saved.getProjectCode() + " - Reason: " + rejectionReason));
         
         return toResponse(saved);
+    }
+    
+    private void verifyApprovalPermission(Project project, String username) {
+        ResearchAssistant approver = memberRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User approval tidak ditemukan"));
+        
+        // ADMIN & RESEARCH_COORD can approve everything
+        if (memberRoleRepository.existsByMemberIdAndRole(approver.getId(), Role.ADMIN) ||
+            memberRoleRepository.existsByMemberIdAndRole(approver.getId(), Role.RESEARCH_COORD)) {
+            return;
+        }
+        
+        // DIVISION_HEAD can only approve projects in their division
+        if (memberRoleRepository.existsByMemberIdAndRole(approver.getId(), Role.DIVISION_HEAD)) {
+            // Check division match
+            // Note: project.getDivision() should ideally match approver.getExpertDivision()
+            // We use case-insensitive check to be safe
+            String projectDiv = project.getDivision() != null ? project.getDivision().trim() : "";
+            String approverDiv = approver.getExpertDivision() != null ? approver.getExpertDivision().trim() : "";
+            
+            if (!projectDiv.equalsIgnoreCase(approverDiv)) {
+                throw new RuntimeException("Anda hanya dapat menyetujui proyek di divisi Anda (" + approverDiv + ")");
+            }
+            return;
+        }
+        
+        // If not one of the above roles
+        throw new RuntimeException("Anda tidak memiliki akses untuk menyetujui proyek ini");
     }
 
     // ========== HELPER: Convert to Response DTO ==========
