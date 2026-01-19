@@ -15,7 +15,12 @@ import java.util.Set;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(name = "projects")
+@Table(name = "projects", indexes = {
+    @Index(name = "idx_project_approval_status", columnList = "approvalStatus"),
+    @Index(name = "idx_project_period_id", columnList = "period_id"),
+    @Index(name = "idx_project_activity_type", columnList = "activityType"),
+    @Index(name = "idx_project_status", columnList = "status")
+})
 public class Project extends BaseEntity {
 
     // Kode proyek untuk display (RST-0001, PKM-0001, dll)
@@ -46,6 +51,21 @@ public class Project extends BaseEntity {
     // Progress tracker (0-100%)
     @Column(nullable = false)
     private Integer progressPercent = 0;
+
+    // ========== APPROVAL WORKFLOW ==========
+
+    // Status approval: PENDING, APPROVED, REJECTED
+    @Column(nullable = false)
+    private String approvalStatus = "PENDING";
+
+    // Alasan penolakan (jika REJECTED)
+    private String rejectionReason;
+
+    // Tanggal disetujui
+    private LocalDate approvedAt;
+
+    // User yang approve/reject
+    private String approvedBy;
 
     // ========== RELASI ==========
 

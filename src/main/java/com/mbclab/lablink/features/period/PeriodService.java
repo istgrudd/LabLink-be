@@ -9,6 +9,8 @@ import com.mbclab.lablink.features.period.dto.*;
 import com.mbclab.lablink.features.project.ProjectRepository;
 import com.mbclab.lablink.features.event.EventRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static com.mbclab.lablink.config.CacheConfig.*;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +38,7 @@ public class PeriodService {
     // ========== CREATE ==========
     
     @Transactional
+    @CacheEvict(value = {ACTIVE_PERIOD_CACHE, ALL_PERIODS_CACHE}, allEntries = true)
     public PeriodResponse createPeriod(CreatePeriodRequest request) {
         if (periodRepository.findByCode(request.getCode()).isPresent()) {
             throw new RuntimeException("Periode dengan kode " + request.getCode() + " sudah ada");
@@ -58,12 +63,14 @@ public class PeriodService {
 
     // ========== READ ==========
     
+    @Cacheable(value = ALL_PERIODS_CACHE)
     public List<PeriodResponse> getAllPeriods() {
         return periodRepository.findAll().stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
+    @Cacheable(value = ACTIVE_PERIOD_CACHE)
     public PeriodResponse getActivePeriod() {
         AcademicPeriod period = periodRepository.findByIsActiveTrue()
                 .orElseThrow(() -> new RuntimeException("Tidak ada periode aktif"));

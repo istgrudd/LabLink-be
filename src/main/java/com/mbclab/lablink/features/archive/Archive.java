@@ -20,7 +20,12 @@ import java.time.LocalDate;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(name = "archives")
+@Table(name = "archives", indexes = {
+    @Index(name = "idx_archive_period_id", columnList = "period_id"),
+    @Index(name = "idx_archive_type", columnList = "archiveType"),
+    @Index(name = "idx_archive_project_id", columnList = "project_id"),
+    @Index(name = "idx_archive_event_id", columnList = "event_id")
+})
 public class Archive extends BaseEntity {
 
     @Column(unique = true, nullable = false)

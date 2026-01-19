@@ -20,6 +20,7 @@ public class EventService {
 
     private final EventRepository eventRepository;
     private final EventCommitteeRepository committeeRepository;
+    private final EventScheduleRepository scheduleRepository;
     private final MemberRepository memberRepository;
     private final EventCodeGenerator eventCodeGenerator;
     private final AcademicPeriodRepository periodRepository;
@@ -236,7 +237,129 @@ public class EventService {
         return toResponse(event);
     }
 
+    // ========== SCHEDULE MANAGEMENT (CALENDAR) ==========
+    
+    @Transactional
+    public EventScheduleResponse addSchedule(String eventId, EventScheduleRequest request) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new RuntimeException("Event tidak ditemukan"));
+        
+        // Validate date is within event range
+        if (request.getActivityDate().isBefore(event.getStartDate()) || 
+            request.getActivityDate().isAfter(event.getEndDate())) {
+            throw new RuntimeException("Tanggal kegiatan harus dalam rentang event (" + 
+                    event.getStartDate() + " - " + event.getEndDate() + ")");
+        }
+        
+        EventSchedule schedule = new EventSchedule();
+        schedule.setEvent(event);
+        schedule.setActivityDate(request.getActivityDate());
+        schedule.setTitle(request.getTitle());
+        schedule.setDescription(request.getDescription());
+        schedule.setStartTime(request.getStartTime());
+        schedule.setEndTime(request.getEndTime());
+        schedule.setLocation(request.getLocation());
+        
+        EventSchedule saved = scheduleRepository.save(schedule);
+        
+        // Publish audit event
+        eventPublisher.publishEvent(AuditEvent.create(
+                "EVENT_SCHEDULE", saved.getId(), saved.getTitle(),
+                "Added schedule to event: " + event.getEventCode() + " on " + saved.getActivityDate()));
+        
+        return toScheduleResponse(saved);
+    }
+    
+    @Transactional
+    public EventScheduleResponse updateSchedule(String scheduleId, EventScheduleRequest request) {
+        EventSchedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new RuntimeException("Schedule tidak ditemukan"));
+        
+        Event event = schedule.getEvent();
+        
+        // Validate date is within event range
+        if (request.getActivityDate() != null && 
+            (request.getActivityDate().isBefore(event.getStartDate()) || 
+             request.getActivityDate().isAfter(event.getEndDate()))) {
+            throw new RuntimeException("Tanggal kegiatan harus dalam rentang event (" + 
+                    event.getStartDate() + " - " + event.getEndDate() + ")");
+        }
+        
+        if (request.getActivityDate() != null) {
+            schedule.setActivityDate(request.getActivityDate());
+        }
+        if (request.getTitle() != null) {
+            schedule.setTitle(request.getTitle());
+        }
+        if (request.getDescription() != null) {
+            schedule.setDescription(request.getDescription());
+        }
+        if (request.getStartTime() != null) {
+            schedule.setStartTime(request.getStartTime());
+        }
+        if (request.getEndTime() != null) {
+            schedule.setEndTime(request.getEndTime());
+        }
+        if (request.getLocation() != null) {
+            schedule.setLocation(request.getLocation());
+        }
+        
+        EventSchedule saved = scheduleRepository.save(schedule);
+        
+        // Publish audit event
+        eventPublisher.publishEvent(AuditEvent.update(
+                "EVENT_SCHEDULE", saved.getId(), saved.getTitle(),
+                "Updated schedule on " + saved.getActivityDate()));
+        
+        return toScheduleResponse(saved);
+    }
+    
+    @Transactional
+    public void deleteSchedule(String scheduleId) {
+        EventSchedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new RuntimeException("Schedule tidak ditemukan"));
+        
+        String title = schedule.getTitle();
+        String eventCode = schedule.getEvent().getEventCode();
+        
+        scheduleRepository.delete(schedule);
+        
+        // Publish audit event
+        eventPublisher.publishEvent(AuditEvent.delete(
+                "EVENT_SCHEDULE", scheduleId, title,
+                "Deleted schedule from event: " + eventCode));
+    }
+    
+    public java.util.List<EventScheduleResponse> getSchedulesByEvent(String eventId) {
+        return scheduleRepository.findByEventId(eventId).stream()
+                .map(this::toScheduleResponse)
+                .collect(Collectors.toList());
+    }
+    
+    public java.util.List<EventScheduleResponse> getCalendarSchedules(java.time.LocalDate start, java.time.LocalDate end) {
+        return scheduleRepository.findByActivityDateBetweenOrderByActivityDateAscStartTimeAsc(start, end).stream()
+                .map(this::toScheduleResponse)
+                .collect(Collectors.toList());
+    }
+
     // ========== HELPER: Convert to Response DTO ==========
+    
+    private EventScheduleResponse toScheduleResponse(EventSchedule schedule) {
+        return EventScheduleResponse.builder()
+                .id(schedule.getId())
+                .eventId(schedule.getEvent().getId())
+                .eventCode(schedule.getEvent().getEventCode())
+                .eventName(schedule.getEvent().getName())
+                .activityDate(schedule.getActivityDate())
+                .title(schedule.getTitle())
+                .description(schedule.getDescription())
+                .startTime(schedule.getStartTime())
+                .endTime(schedule.getEndTime())
+                .location(schedule.getLocation())
+                .createdAt(schedule.getCreatedAt())
+                .updatedAt(schedule.getUpdatedAt())
+                .build();
+    }
     
     private EventResponse toResponse(Event event) {
         // PIC summary

@@ -27,6 +27,12 @@ public class ProjectResponse extends BaseResponse {
     private LocalDate startDate;
     private LocalDate endDate;
     
+    // Approval workflow
+    private String approvalStatus;
+    private String rejectionReason;
+    private LocalDate approvedAt;
+    private String approvedBy;
+    
     // Leader summary
     private MemberSummary leader;
     

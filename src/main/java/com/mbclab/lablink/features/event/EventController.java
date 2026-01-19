@@ -2,10 +2,12 @@ package com.mbclab.lablink.features.event;
 
 import com.mbclab.lablink.features.event.dto.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -104,5 +106,46 @@ public class EventController {
             @PathVariable String memberId) {
         EventResponse updated = eventService.removeCommitteeMember(id, memberId);
         return ResponseEntity.ok(updated);
+    }
+
+    // ========== SCHEDULE MANAGEMENT (CALENDAR) ==========
+    
+    @PostMapping("/{eventId}/schedules")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<EventScheduleResponse> addSchedule(
+            @PathVariable String eventId,
+            @RequestBody EventScheduleRequest request) {
+        EventScheduleResponse created = eventService.addSchedule(eventId, request);
+        return ResponseEntity.ok(created);
+    }
+    
+    @GetMapping("/{eventId}/schedules")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<EventScheduleResponse>> getSchedulesByEvent(@PathVariable String eventId) {
+        return ResponseEntity.ok(eventService.getSchedulesByEvent(eventId));
+    }
+    
+    @PutMapping("/schedules/{scheduleId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<EventScheduleResponse> updateSchedule(
+            @PathVariable String scheduleId,
+            @RequestBody EventScheduleRequest request) {
+        EventScheduleResponse updated = eventService.updateSchedule(scheduleId, request);
+        return ResponseEntity.ok(updated);
+    }
+    
+    @DeleteMapping("/schedules/{scheduleId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteSchedule(@PathVariable String scheduleId) {
+        eventService.deleteSchedule(scheduleId);
+        return ResponseEntity.noContent().build();
+    }
+    
+    @GetMapping("/calendar")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<EventScheduleResponse>> getCalendarSchedules(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+        return ResponseEntity.ok(eventService.getCalendarSchedules(start, end));
     }
 }

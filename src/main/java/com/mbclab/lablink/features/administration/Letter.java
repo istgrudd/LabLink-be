@@ -19,7 +19,11 @@ import java.time.LocalDate;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(name = "letters")
+@Table(name = "letters", indexes = {
+    @Index(name = "idx_letter_status", columnList = "status"),
+    @Index(name = "idx_letter_period_id", columnList = "period_id"),
+    @Index(name = "idx_letter_requester_id", columnList = "requester_id")
+})
 public class Letter extends BaseEntity {
 
     // Generated on approval (nullable until approved)

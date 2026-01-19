@@ -9,6 +9,10 @@ import com.mbclab.lablink.features.project.dto.ProjectResponse;
 import com.mbclab.lablink.features.project.dto.UpdateProjectRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -78,7 +82,12 @@ public class ProjectService {
 
     // ========== READ ==========
     
-    public List<ProjectResponse> getAllProjects() {
+    public Page<ProjectResponse> getAllProjects(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return projectRepository.findAll(pageable).map(this::toResponse);
+    }
+    
+    public List<ProjectResponse> getAllProjectsUnpaginated() {
         return projectRepository.findAll().stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -92,6 +101,12 @@ public class ProjectService {
 
     public List<ProjectResponse> getOrphanProjects() {
         return projectRepository.findByPeriodIsNull().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<ProjectResponse> getPendingProjects() {
+        return projectRepository.findByApprovalStatus("PENDING").stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
@@ -248,6 +263,54 @@ public class ProjectService {
                 .collect(Collectors.toList());
     }
 
+    // ========== APPROVAL WORKFLOW ==========
+    
+    @Transactional
+    public ProjectResponse approveProject(String id, String approvedBy) {
+        Project project = projectRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Project tidak ditemukan"));
+        
+        if (!"PENDING".equals(project.getApprovalStatus())) {
+            throw new RuntimeException("Project sudah diproses sebelumnya");
+        }
+        
+        project.setApprovalStatus("APPROVED");
+        project.setApprovedAt(java.time.LocalDate.now());
+        project.setApprovedBy(approvedBy);
+        
+        Project saved = projectRepository.save(project);
+        
+        // Publish audit event
+        eventPublisher.publishEvent(AuditEvent.update(
+                "PROJECT", saved.getId(), saved.getName(),
+                "Approved project: " + saved.getProjectCode()));
+        
+        return toResponse(saved);
+    }
+    
+    @Transactional
+    public ProjectResponse rejectProject(String id, String rejectionReason, String rejectedBy) {
+        Project project = projectRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Project tidak ditemukan"));
+        
+        if (!"PENDING".equals(project.getApprovalStatus())) {
+            throw new RuntimeException("Project sudah diproses sebelumnya");
+        }
+        
+        project.setApprovalStatus("REJECTED");
+        project.setRejectionReason(rejectionReason);
+        project.setApprovedBy(rejectedBy);
+        
+        Project saved = projectRepository.save(project);
+        
+        // Publish audit event
+        eventPublisher.publishEvent(AuditEvent.update(
+                "PROJECT", saved.getId(), saved.getName(),
+                "Rejected project: " + saved.getProjectCode() + " - Reason: " + rejectionReason));
+        
+        return toResponse(saved);
+    }
+
     // ========== HELPER: Convert to Response DTO ==========
     
     private ProjectResponse toResponse(Project project) {
@@ -283,6 +346,10 @@ public class ProjectService {
                 .progressPercent(project.getProgressPercent())
                 .startDate(project.getStartDate())
                 .endDate(project.getEndDate())
+                .approvalStatus(project.getApprovalStatus())
+                .rejectionReason(project.getRejectionReason())
+                .approvedAt(project.getApprovedAt())
+                .approvedBy(project.getApprovedBy())
                 .createdAt(project.getCreatedAt())
                 .updatedAt(project.getUpdatedAt())
                 .leader(leaderSummary)

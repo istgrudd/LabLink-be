@@ -3,6 +3,7 @@ package com.mbclab.lablink.features.member;
 import com.mbclab.lablink.features.auth.AppUser;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -10,7 +11,9 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(name = "research_assistants")
+@Table(name = "research_assistants", indexes = {
+    @Index(name = "idx_member_is_active", columnList = "isActive")
+})
 public class ResearchAssistant extends AppUser {
 
     // Field Spesifik Bisnis Lab

@@ -16,4 +16,7 @@ public interface PresenceRepository extends JpaRepository<Presence, String> {
     List<Presence> findByDateBetween(LocalDate startDate, LocalDate endDate);
     
     List<Presence> findByTypeAndDateBetween(Presence.PresenceType type, LocalDate startDate, LocalDate endDate);
+    
+    // For period filtering
+    List<Presence> findByPeriodId(String periodId);
 }

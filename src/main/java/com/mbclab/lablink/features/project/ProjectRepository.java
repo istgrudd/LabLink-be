@@ -28,4 +28,7 @@ public interface ProjectRepository extends JpaRepository<Project, String> {
     
     // For orphan filter
     List<Project> findByPeriodIsNull();
+    
+    // For approval workflow
+    List<Project> findByApprovalStatus(String approvalStatus);
 }

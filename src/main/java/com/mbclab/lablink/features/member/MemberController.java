@@ -5,6 +5,7 @@ import com.mbclab.lablink.features.member.dto.MemberResponse;
 import com.mbclab.lablink.features.member.dto.UpdateMemberRequest;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -31,8 +32,16 @@ public class MemberController {
     
     @GetMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<MemberResponse>> getAllMembers() {
-        return ResponseEntity.ok(memberService.getAllMembers());
+    public ResponseEntity<Page<MemberResponse>> getAllMembers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(memberService.getAllMembers(page, size));
+    }
+    
+    @GetMapping("/all")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<MemberResponse>> getAllMembersUnpaginated() {
+        return ResponseEntity.ok(memberService.getAllMembersUnpaginated());
     }
 
     @GetMapping("/{id}")

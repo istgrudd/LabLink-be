@@ -11,6 +11,10 @@ import com.mbclab.lablink.features.period.MemberPeriodRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -80,7 +84,12 @@ public class MemberService {
 
     // ========== READ ==========
     
-    public List<MemberResponse> getAllMembers() {
+    public Page<MemberResponse> getAllMembers(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return memberRepository.findAll(pageable).map(this::toResponse);
+    }
+    
+    public List<MemberResponse> getAllMembersUnpaginated() {
         return memberRepository.findAll().stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());

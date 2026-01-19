@@ -14,7 +14,11 @@ import java.util.Set;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(name = "events")
+@Table(name = "events", indexes = {
+    @Index(name = "idx_event_period_id", columnList = "period_id"),
+    @Index(name = "idx_event_start_date", columnList = "startDate"),
+    @Index(name = "idx_event_status", columnList = "status")
+})
 public class Event extends BaseEntity {
 
     @Column(unique = true, nullable = false)
@@ -50,4 +54,10 @@ public class Event extends BaseEntity {
     @lombok.EqualsAndHashCode.Exclude
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<EventCommittee> committee = new HashSet<>();
+
+    // Event schedules (untuk calendar)
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<EventSchedule> schedules = new HashSet<>();
 }
