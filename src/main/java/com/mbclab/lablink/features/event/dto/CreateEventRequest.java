@@ -11,4 +11,7 @@ public class CreateEventRequest {
     private LocalDate startDate;
     private LocalDate endDate;
     private String picId;  // Person In Charge ID
+    
+    // Optional: Create schedules directly
+    private java.util.List<EventScheduleRequest> schedules;
 }

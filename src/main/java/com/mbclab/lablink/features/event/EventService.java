@@ -53,6 +53,29 @@ public class EventService {
         
         Event saved = eventRepository.save(event);
         
+        // 5. Create Schedules if present
+        if (request.getSchedules() != null && !request.getSchedules().isEmpty()) {
+            for (EventScheduleRequest scheduleReq : request.getSchedules()) {
+                // Validate date
+                if (scheduleReq.getActivityDate().isBefore(saved.getStartDate()) || 
+                    scheduleReq.getActivityDate().isAfter(saved.getEndDate())) {
+                    throw new RuntimeException("Tanggal jadwal " + scheduleReq.getActivityDate() + 
+                            " diluar rentang event (" + saved.getStartDate() + " - " + saved.getEndDate() + ")");
+                }
+                
+                EventSchedule schedule = new EventSchedule();
+                schedule.setEvent(saved);
+                schedule.setActivityDate(scheduleReq.getActivityDate());
+                schedule.setTitle(scheduleReq.getTitle());
+                schedule.setDescription(scheduleReq.getDescription());
+                schedule.setStartTime(scheduleReq.getStartTime());
+                schedule.setEndTime(scheduleReq.getEndTime());
+                schedule.setLocation(scheduleReq.getLocation());
+                
+                scheduleRepository.save(schedule);
+            }
+        }
+        
         // Publish audit event
         eventPublisher.publishEvent(AuditEvent.create(
                 "EVENT", saved.getId(), saved.getName(),

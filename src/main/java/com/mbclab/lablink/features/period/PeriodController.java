@@ -40,6 +40,20 @@ public class PeriodController {
     public ResponseEntity<PeriodResponse> getPeriodById(@PathVariable String id) {
         return ResponseEntity.ok(periodService.getPeriodById(id));
     }
+    
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<PeriodResponse> updatePeriod(
+            @PathVariable String id,
+            @RequestBody UpdatePeriodRequest request) {
+        return ResponseEntity.ok(periodService.updatePeriod(id, request));
+    }
+
+    @PatchMapping("/{id}/archive")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<PeriodResponse> archivePeriod(@PathVariable String id) {
+        return ResponseEntity.ok(periodService.archivePeriod(id));
+    }
 
     // ========== ACTIVATE & CLOSE ==========
     

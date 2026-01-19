@@ -66,6 +66,7 @@ public class ProjectService {
         project.setDivision(request.getDivision());
         project.setActivityType(request.getActivityType().toUpperCase());
         project.setStatus("NOT_STARTED");
+        project.setApprovalStatus("PENDING");
         project.setProgressPercent(0);
         project.setStartDate(request.getStartDate());
         project.setEndDate(request.getEndDate());

@@ -110,6 +110,54 @@ public class PeriodService {
         return toResponse(saved);
     }
 
+    // ========== UPDATE ==========
+
+    @Transactional
+    public PeriodResponse updatePeriod(String id, UpdatePeriodRequest request) {
+        AcademicPeriod period = periodRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Periode tidak ditemukan"));
+
+        if (request.getName() != null && !request.getName().isBlank()) {
+            period.setName(request.getName());
+        }
+        if (request.getStartDate() != null) {
+            period.setStartDate(request.getStartDate());
+        }
+        if (request.getEndDate() != null) {
+            period.setEndDate(request.getEndDate());
+        }
+
+        AcademicPeriod saved = periodRepository.save(period);
+        
+        eventPublisher.publishEvent(AuditEvent.update(
+                "PERIOD", saved.getId(), saved.getName(),
+                "Updated period: " + saved.getCode()));
+
+        return toResponse(saved);
+    }
+    
+    // ========== ARCHIVE ==========
+    
+    @Transactional
+    public PeriodResponse archivePeriod(String id) {
+        AcademicPeriod period = periodRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Periode tidak ditemukan"));
+        
+        if (period.isActive()) {
+            // Auto deactivate if archiving
+            period.setActive(false);
+        }
+        
+        period.setArchived(true);
+        AcademicPeriod saved = periodRepository.save(period);
+        
+        eventPublisher.publishEvent(AuditEvent.update(
+                "PERIOD", saved.getId(), saved.getName(),
+                "Archived period: " + saved.getCode()));
+        
+        return toResponse(saved);
+    }
+
     // ========== CLOSE PERIOD ==========
     
     @Transactional

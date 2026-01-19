@@ -137,7 +137,7 @@ public class FinanceController {
     }
 
     @GetMapping("/transactions")
-    @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<TransactionResponse>> getAllTransactions(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -145,7 +145,7 @@ public class FinanceController {
     }
 
     @GetMapping("/transactions/summary")
-    @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<TransactionSummaryResponse> getTransactionSummary() {
         return ResponseEntity.ok(financeService.getTransactionSummary());
     }
