@@ -25,4 +25,6 @@ public interface DuesPaymentRepository extends JpaRepository<DuesPayment, String
     
     @Query("SELECT dp FROM DuesPayment dp WHERE dp.status = 'PENDING' ORDER BY dp.createdAt DESC")
     List<DuesPayment> findPendingVerification();
+    
+    void deleteByPeriodId(String periodId);
 }

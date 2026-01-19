@@ -296,8 +296,13 @@ public class ProjectService {
         ResearchAssistant approver = memberRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User approval tidak ditemukan"));
         
+        // Check Legacy Role (AppUser.role) AND MemberRole (RBAC)
+        String userRole = approver.getRole().toUpperCase(); // from AppUser
+        
         // ADMIN & RESEARCH_COORD can approve everything
-        if (memberRoleRepository.existsByMemberIdAndRole(approver.getId(), Role.ADMIN) ||
+        if ("ADMIN".equals(userRole) || 
+            "RESEARCH_COORD".equals(userRole) ||
+            memberRoleRepository.existsByMemberIdAndRole(approver.getId(), Role.ADMIN) ||
             memberRoleRepository.existsByMemberIdAndRole(approver.getId(), Role.RESEARCH_COORD)) {
             return;
         }

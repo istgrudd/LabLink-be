@@ -126,6 +126,7 @@ public class FinanceService {
         dues.setPeriod(period);
         dues.setPaymentMonth(request.getPaymentMonth());
         dues.setPaymentYear(request.getPaymentYear());
+        dues.setAmount(request.getAmount());
         dues.setPaidAt(LocalDate.now());
         dues.setPaymentProofPath(proofPath);
         dues.setStatus("PENDING");

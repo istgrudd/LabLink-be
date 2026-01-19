@@ -33,6 +33,8 @@ public class PeriodService {
     private final EventRepository eventRepository;
     private final ArchiveRepository archiveRepository;
     private final LetterRepository letterRepository;
+    private final com.mbclab.lablink.features.finance.DuesPaymentRepository duesRepository;
+    private final com.mbclab.lablink.features.finance.FinanceTransactionRepository financeTransactionRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     // ========== CREATE ==========
@@ -215,6 +217,13 @@ public class PeriodService {
         if (period.isActive()) {
             throw new RuntimeException("Tidak bisa menghapus periode yang sedang aktif. Tetapkan periode lain sebagai aktif terlebih dahulu.");
         }
+        
+        // 0. Delete Financial Data (Cascade)
+        // Delete Dues in this period
+        duesRepository.deleteByPeriodId(id);
+        
+        // Delete Transactions in this period
+        financeTransactionRepository.deleteByPeriodId(id);
         
         // 1. Delete all member-period associations
         List<MemberPeriod> memberPeriods = memberPeriodRepository.findByPeriodId(id);

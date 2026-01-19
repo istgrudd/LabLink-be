@@ -52,10 +52,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 ResearchAssistant user = memberRepository.findByUsername(username).orElse(null);
 
                 if (user != null && jwtService.isTokenValid(jwt, username)) {
-                    // Create authorities from role
-                    List<SimpleGrantedAuthority> authorities = List.of(
-                            new SimpleGrantedAuthority("ROLE_" + user.getRole().toUpperCase())
-                    );
+                    java.util.Set<String> roleNames = new java.util.HashSet<>();
+                    
+                    // 1. Legacy Role
+                    if (user.getRole() != null) {
+                        roleNames.add(user.getRole().toUpperCase());
+                    }
+                    
+                    // 2. New RBAC Roles
+                    if (user.getMemberRoles() != null) {
+                        user.getMemberRoles().forEach(mr -> roleNames.add(mr.getRole().name()));
+                    }
+
+                    // Create authorities
+                    List<SimpleGrantedAuthority> authorities = roleNames.stream()
+                            .map(r -> r.startsWith("ROLE_") ? r : "ROLE_" + r)
+                            .map(SimpleGrantedAuthority::new)
+                            .collect(java.util.stream.Collectors.toList());
 
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             user.getUsername(),
