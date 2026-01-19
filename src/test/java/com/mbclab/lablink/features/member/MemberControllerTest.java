@@ -51,7 +51,7 @@ class MemberControllerTest {
     @Order(2)
     @DisplayName("Get All Members")
     void getAllMembers_shouldReturnList() {
-        List<MemberResponse> members = memberService.getAllMembers();
+        List<MemberResponse> members = memberService.getAllMembersUnpaginated();
 
         assertNotNull(members);
         assertTrue(members.size() >= 1);

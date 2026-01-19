@@ -81,7 +81,7 @@ class ProjectControllerTest {
     @Order(2)
     @DisplayName("Get All Projects")
     void getAllProjects_shouldReturnList() {
-        List<ProjectResponse> projects = projectService.getAllProjects();
+        List<ProjectResponse> projects = projectService.getAllProjectsUnpaginated();
 
         assertNotNull(projects);
         assertTrue(projects.size() >= 1);

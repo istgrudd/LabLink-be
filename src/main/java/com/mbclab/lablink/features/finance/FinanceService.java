@@ -10,7 +10,6 @@ import com.mbclab.lablink.features.period.AcademicPeriod;
 import com.mbclab.lablink.features.period.AcademicPeriodRepository;
 import com.mbclab.lablink.features.project.Project;
 import com.mbclab.lablink.features.project.ProjectRepository;
-import com.mbclab.lablink.shared.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -39,7 +38,6 @@ public class FinanceService {
     private final AcademicPeriodRepository periodRepository;
     private final EventRepository eventRepository;
     private final ProjectRepository projectRepository;
-    private final FileStorageService fileStorageService;
     private final ApplicationEventPublisher eventPublisher;
 
     // ==================== CATEGORY ====================
