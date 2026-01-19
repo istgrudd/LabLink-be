@@ -18,7 +18,7 @@ public class ArchiveController {
     // ========== CREATE ==========
     
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TECH_OPS')")
     public ResponseEntity<ArchiveResponse> createArchive(@RequestBody CreateArchiveRequest request) {
         ArchiveResponse created = archiveService.createArchive(request);
         return ResponseEntity.ok(created);
@@ -71,7 +71,7 @@ public class ArchiveController {
     // ========== UPDATE ==========
     
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TECH_OPS')")
     public ResponseEntity<ArchiveResponse> updateArchive(
             @PathVariable String id,
             @RequestBody UpdateArchiveRequest request) {
@@ -82,7 +82,7 @@ public class ArchiveController {
     // ========== DELETE ==========
     
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TECH_OPS')")
     public ResponseEntity<Void> deleteArchive(@PathVariable String id) {
         archiveService.deleteArchive(id);
         return ResponseEntity.noContent().build();

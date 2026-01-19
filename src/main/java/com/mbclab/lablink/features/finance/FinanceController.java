@@ -28,7 +28,7 @@ public class FinanceController {
     // ==================== CATEGORY ====================
 
     @PostMapping("/categories")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ResponseEntity<CategoryResponse> createCategory(@RequestBody CategoryRequest request) {
         return ResponseEntity.ok(financeService.createCategory(request));
     }
@@ -46,7 +46,7 @@ public class FinanceController {
     }
 
     @PutMapping("/categories/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ResponseEntity<CategoryResponse> updateCategory(
             @PathVariable String id, 
             @RequestBody CategoryRequest request) {
@@ -54,7 +54,7 @@ public class FinanceController {
     }
 
     @DeleteMapping("/categories/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ResponseEntity<Void> deleteCategory(@PathVariable String id) {
         financeService.deleteCategory(id);
         return ResponseEntity.noContent().build();
@@ -88,19 +88,19 @@ public class FinanceController {
     }
 
     @GetMapping("/dues")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ResponseEntity<List<DuesPaymentResponse>> getAllDues() {
         return ResponseEntity.ok(financeService.getAllDues());
     }
 
     @GetMapping("/dues/pending")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ResponseEntity<List<DuesPaymentResponse>> getPendingVerification() {
         return ResponseEntity.ok(financeService.getPendingVerification());
     }
 
     @PutMapping("/dues/{id}/verify")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ResponseEntity<DuesPaymentResponse> verifyDuesPayment(
             @PathVariable String id,
             @RequestHeader("Authorization") String authHeader) {
@@ -111,7 +111,7 @@ public class FinanceController {
     // ==================== TRANSACTIONS ====================
 
     @PostMapping(value = "/transactions", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ResponseEntity<TransactionResponse> createTransactionWithReceipt(
             @RequestHeader("Authorization") String authHeader,
             @RequestParam("data") String transactionDataJson,
@@ -128,7 +128,7 @@ public class FinanceController {
     }
 
     @PostMapping("/transactions/simple")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ResponseEntity<TransactionResponse> createTransactionSimple(
             @RequestHeader("Authorization") String authHeader,
             @RequestBody TransactionRequest request) {
@@ -137,7 +137,7 @@ public class FinanceController {
     }
 
     @GetMapping("/transactions")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ResponseEntity<Page<TransactionResponse>> getAllTransactions(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -145,13 +145,13 @@ public class FinanceController {
     }
 
     @GetMapping("/transactions/summary")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ResponseEntity<TransactionSummaryResponse> getTransactionSummary() {
         return ResponseEntity.ok(financeService.getTransactionSummary());
     }
 
     @PutMapping("/transactions/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ResponseEntity<TransactionResponse> updateTransaction(
             @PathVariable String id,
             @RequestBody TransactionRequest request) {
@@ -159,7 +159,7 @@ public class FinanceController {
     }
 
     @DeleteMapping("/transactions/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ResponseEntity<Void> deleteTransaction(@PathVariable String id) {
         financeService.deleteTransaction(id);
         return ResponseEntity.noContent().build();
@@ -185,7 +185,7 @@ public class FinanceController {
     }
 
     @GetMapping("/procurement")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ResponseEntity<Page<ProcurementResponse>> getAllProcurementRequests(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -193,13 +193,13 @@ public class FinanceController {
     }
 
     @GetMapping("/procurement/pending")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ResponseEntity<List<ProcurementResponse>> getPendingProcurements() {
         return ResponseEntity.ok(financeService.getPendingProcurements());
     }
 
     @PutMapping("/procurement/{id}/approve")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ResponseEntity<ProcurementResponse> approveProcurement(
             @PathVariable String id,
             @RequestHeader("Authorization") String authHeader) {
@@ -208,7 +208,7 @@ public class FinanceController {
     }
 
     @PutMapping("/procurement/{id}/reject")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ResponseEntity<ProcurementResponse> rejectProcurement(
             @PathVariable String id,
             @RequestHeader("Authorization") String authHeader,
@@ -218,7 +218,7 @@ public class FinanceController {
     }
 
     @PutMapping("/procurement/{id}/mark-purchased")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ResponseEntity<ProcurementResponse> markPurchased(
             @PathVariable String id,
             @RequestParam(required = false) String transactionId) {

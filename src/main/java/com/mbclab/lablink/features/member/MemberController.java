@@ -1,7 +1,11 @@
 package com.mbclab.lablink.features.member;
 
+import com.mbclab.lablink.features.auth.AppUser;
+import com.mbclab.lablink.features.auth.AuthService;
+import com.mbclab.lablink.features.member.dto.AssignRolesRequest;
 import com.mbclab.lablink.features.member.dto.CreateMemberRequest;
 import com.mbclab.lablink.features.member.dto.MemberResponse;
+import com.mbclab.lablink.features.member.dto.RoleResponse;
 import com.mbclab.lablink.features.member.dto.UpdateMemberRequest;
 
 import lombok.RequiredArgsConstructor;
@@ -18,14 +22,14 @@ import java.util.List;
 public class MemberController {
 
     private final MemberService memberService;
+    private final AuthService authService;
 
     // ========== CREATE ==========
     
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<MemberResponse> createMember(@RequestBody CreateMemberRequest request) {
-        MemberResponse created = memberService.createResearchAssistant(request);
-        return ResponseEntity.ok(created);
+        return ResponseEntity.ok(memberService.createResearchAssistant(request));
     }
 
     // ========== READ ==========
@@ -56,8 +60,6 @@ public class MemberController {
         return ResponseEntity.ok(memberService.getMemberByNim(nim));
     }
 
-
-
     // ========== UPDATE ==========
     
     @PutMapping("/{id}")
@@ -65,8 +67,7 @@ public class MemberController {
     public ResponseEntity<MemberResponse> updateMember(
             @PathVariable String id, 
             @RequestBody UpdateMemberRequest request) {
-        MemberResponse updated = memberService.updateMember(id, request);
-        return ResponseEntity.ok(updated);
+        return ResponseEntity.ok(memberService.updateMember(id, request));
     }
 
     // ========== DELETE ==========
@@ -77,4 +78,30 @@ public class MemberController {
         memberService.deleteMember(id);
         return ResponseEntity.noContent().build();
     }
+
+    // ========== ROLE MANAGEMENT ==========
+    
+    @GetMapping("/roles")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<RoleResponse>> getAllRoles() {
+        return ResponseEntity.ok(memberService.getAllRoles());
+    }
+
+    @GetMapping("/{id}/roles")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<MemberResponse.RoleInfo>> getMemberRoles(@PathVariable String id) {
+        return ResponseEntity.ok(memberService.getMemberRoles(id));
+    }
+
+    @PutMapping("/{id}/roles")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<MemberResponse> assignRoles(
+            @PathVariable String id,
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody AssignRolesRequest request) {
+        String token = authHeader.substring(7);
+        AppUser admin = authService.validateToken(token);
+        return ResponseEntity.ok(memberService.assignRoles(id, request, admin.getUsername()));
+    }
 }
+

@@ -1,8 +1,10 @@
 package com.mbclab.lablink.features.member;
 
 import com.mbclab.lablink.features.activitylog.AuditEvent;
+import com.mbclab.lablink.features.member.dto.AssignRolesRequest;
 import com.mbclab.lablink.features.member.dto.CreateMemberRequest;
 import com.mbclab.lablink.features.member.dto.MemberResponse;
+import com.mbclab.lablink.features.member.dto.RoleResponse;
 import com.mbclab.lablink.features.member.dto.UpdateMemberRequest;
 import com.mbclab.lablink.features.period.AcademicPeriod;
 import com.mbclab.lablink.features.period.AcademicPeriodRepository;
@@ -19,6 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -29,6 +32,7 @@ import java.util.stream.Collectors;
 public class MemberService {
 
     private final MemberRepository memberRepository;
+    private final MemberRoleRepository memberRoleRepository;
     private final AcademicPeriodRepository periodRepository;
     private final MemberPeriodRepository memberPeriodRepository;
     private final PasswordEncoder passwordEncoder;
@@ -38,43 +42,35 @@ public class MemberService {
     
     @Transactional
     public MemberResponse createResearchAssistant(CreateMemberRequest request) {
-        // 1. Validasi: NIM tidak boleh kembar
         if (memberRepository.existsByUsername(request.getNim())) {
             throw new RuntimeException("Member dengan NIM " + request.getNim() + " sudah ada!");
         }
 
-        // 2. Buat Object Baru
         ResearchAssistant newMember = new ResearchAssistant();
-        
-        // 3. Set Data Identitas
         newMember.setUsername(request.getNim());
         newMember.setFullName(request.getFullName());
-        // Use role from request if provided, otherwise default to ASSISTANT
-        String role = (request.getRole() != null && !request.getRole().isBlank()) 
-                ? request.getRole().toUpperCase() 
-                : "ASSISTANT";
-        newMember.setRole(role);
+        newMember.setRole("ASSISTANT"); // Default role in AppUser (for backward compatibility)
         
-        // 4. Set Password Default (= NIM) & Enkripsi
         String encryptedPassword = passwordEncoder.encode(request.getNim());
         newMember.setPassword(encryptedPassword);
         newMember.setPasswordChanged(false);
         
-        // 5. Set Data Spesifik
         newMember.setExpertDivision(request.getExpertDivision());
         newMember.setDepartment(request.getDepartment());
         
-        // 6. Simpan member
         ResearchAssistant saved = memberRepository.save(newMember);
         
-        // 7. Auto-associate dengan active period jika ada
+        // Assign default ASSISTANT role
+        MemberRole defaultRole = new MemberRole(saved, Role.ASSISTANT, "SYSTEM");
+        memberRoleRepository.save(defaultRole);
+        
+        // Auto-associate dengan active period jika ada
         Optional<AcademicPeriod> activePeriod = periodRepository.findByIsActiveTrue();
         if (activePeriod.isPresent()) {
             MemberPeriod mp = new MemberPeriod(saved, activePeriod.get(), request.getPosition());
             memberPeriodRepository.save(mp);
         }
         
-        // Publish audit event
         eventPublisher.publishEvent(AuditEvent.create(
                 "MEMBER", saved.getId(), saved.getFullName(),
                 "Created member: " + saved.getUsername()));
@@ -107,20 +103,6 @@ public class MemberService {
         return toResponse(member);
     }
 
-    public List<MemberResponse> getOrphanMembers() {
-        // Get all member IDs that are in at least one period
-        List<String> memberIdsInPeriods = memberPeriodRepository.findAll().stream()
-                .map(mp -> mp.getMember().getId())
-                .distinct()
-                .collect(Collectors.toList());
-        
-        // Get all members not in that list
-        return memberRepository.findAll().stream()
-                .filter(m -> !memberIdsInPeriods.contains(m.getId()))
-                .map(this::toResponse)
-                .collect(Collectors.toList());
-    }
-
     // ========== UPDATE ==========
     
     @Transactional
@@ -128,7 +110,6 @@ public class MemberService {
         ResearchAssistant member = memberRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Member dengan ID " + id + " tidak ditemukan"));
 
-        // Partial Update
         if (request.getFullName() != null && !request.getFullName().isBlank()) {
             member.setFullName(request.getFullName());
         }
@@ -144,7 +125,6 @@ public class MemberService {
 
         ResearchAssistant saved = memberRepository.save(member);
         
-        // Publish audit event
         eventPublisher.publishEvent(AuditEvent.update(
                 "MEMBER", saved.getId(), saved.getFullName(),
                 "Updated member: " + saved.getUsername()));
@@ -162,28 +142,97 @@ public class MemberService {
         String nim = member.getUsername();
         
         try {
+            // Delete roles first
+            memberRoleRepository.deleteByMemberId(id);
             memberRepository.deleteById(id);
             
-            // Publish audit event
             eventPublisher.publishEvent(AuditEvent.delete(
                     "MEMBER", id, name,
                     "Deleted member: " + nim));
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
             throw new RuntimeException(
-                "Tidak dapat menghapus member " + name + " karena masih terdaftar sebagai ketua proyek atau terlibat dalam data lain. " +
-                "Harap hapus atau ubah ketua proyek terlebih dahulu."
+                "Tidak dapat menghapus member " + name + " karena masih terdaftar sebagai ketua proyek atau terlibat dalam data lain."
             );
         }
     }
 
-    // ========== HELPER: Convert to Response DTO ==========
+    // ========== ROLE MANAGEMENT ==========
+    
+    public List<RoleResponse> getAllRoles() {
+        return Arrays.stream(Role.values())
+                .map(r -> RoleResponse.builder()
+                        .role(r.name())
+                        .displayName(r.getDisplayName())
+                        .description(r.getDescription())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    public List<MemberResponse.RoleInfo> getMemberRoles(String memberId) {
+        return memberRoleRepository.findByMemberId(memberId).stream()
+                .map(mr -> MemberResponse.RoleInfo.builder()
+                        .role(mr.getRole().name())
+                        .displayName(mr.getRole().getDisplayName())
+                        .description(mr.getRole().getDescription())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public MemberResponse assignRoles(String memberId, AssignRolesRequest request, String assignedBy) {
+        ResearchAssistant member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new RuntimeException("Member tidak ditemukan"));
+        
+        // Clear existing roles
+        memberRoleRepository.deleteByMemberId(memberId);
+        
+        // Assign new roles
+        for (String roleName : request.getRoles()) {
+            try {
+                Role role = Role.valueOf(roleName.toUpperCase());
+                MemberRole mr = new MemberRole(member, role, assignedBy);
+                memberRoleRepository.save(mr);
+            } catch (IllegalArgumentException e) {
+                throw new RuntimeException("Role tidak valid: " + roleName);
+            }
+        }
+        
+        eventPublisher.publishEvent(AuditEvent.update(
+                "MEMBER", member.getId(), member.getFullName(),
+                "Updated roles to: " + String.join(", ", request.getRoles())));
+        
+        return toResponse(member);
+    }
+
+    public boolean hasRole(String memberId, Role role) {
+        return memberRoleRepository.existsByMemberIdAndRole(memberId, role);
+    }
+
+    public boolean hasAnyRole(String memberId, Role... roles) {
+        for (Role role : roles) {
+            if (memberRoleRepository.existsByMemberIdAndRole(memberId, role)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // ========== HELPER ==========
     
     private MemberResponse toResponse(ResearchAssistant member) {
+        List<MemberResponse.RoleInfo> roles = memberRoleRepository.findByMemberId(member.getId()).stream()
+                .map(mr -> MemberResponse.RoleInfo.builder()
+                        .role(mr.getRole().name())
+                        .displayName(mr.getRole().getDisplayName())
+                        .description(mr.getRole().getDescription())
+                        .build())
+                .collect(Collectors.toList());
+        
         return MemberResponse.builder()
                 .id(member.getId())
                 .username(member.getUsername())
                 .fullName(member.getFullName())
-                .role(member.getRole())
+                .roles(roles)
                 .expertDivision(member.getExpertDivision())
                 .department(member.getDepartment())
                 .email(member.getEmail())
