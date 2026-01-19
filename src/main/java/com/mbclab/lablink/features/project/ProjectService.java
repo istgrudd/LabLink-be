@@ -9,6 +9,9 @@ import com.mbclab.lablink.features.period.AcademicPeriodRepository;
 import com.mbclab.lablink.features.project.dto.CreateProjectRequest;
 import com.mbclab.lablink.features.project.dto.ProjectResponse;
 import com.mbclab.lablink.features.project.dto.UpdateProjectRequest;
+import com.mbclab.lablink.shared.exception.BusinessValidationException;
+import com.mbclab.lablink.shared.exception.ResourceNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -46,13 +49,13 @@ public class ProjectService {
         String projectCode = projectCodeGenerator.generate(request.getActivityType());
         
         ResearchAssistant leader = memberRepository.findById(request.getLeaderId())
-                .orElseThrow(() -> new RuntimeException("Leader tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Leader dengan ID " + request.getLeaderId() + " tidak ditemukan"));
         
         Set<ResearchAssistant> teamMembers = new HashSet<>();
         if (request.getTeamMemberIds() != null && !request.getTeamMemberIds().isEmpty()) {
             teamMembers = request.getTeamMemberIds().stream()
                     .map(id -> memberRepository.findById(id)
-                            .orElseThrow(() -> new RuntimeException("Member " + id + " tidak ditemukan")))
+                            .orElseThrow(() -> new ResourceNotFoundException("Member " + id + " tidak ditemukan")))
                     .collect(Collectors.toSet());
         }
         
@@ -113,13 +116,13 @@ public class ProjectService {
 
     public ProjectResponse getProjectById(String id) {
         Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Project tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Project dengan ID " + id + " tidak ditemukan"));
         return toResponse(project);
     }
 
     public ProjectResponse getProjectByCode(String projectCode) {
         Project project = projectRepository.findByProjectCode(projectCode)
-                .orElseThrow(() -> new RuntimeException("Project tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Project dengan kode " + projectCode + " tidak ditemukan"));
         return toResponse(project);
     }
 
@@ -128,7 +131,7 @@ public class ProjectService {
     @Transactional
     public ProjectResponse updateProject(String id, UpdateProjectRequest request) {
         Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Project tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Project dengan ID " + id + " tidak ditemukan"));
         
         if (request.getName() != null && !request.getName().isBlank()) project.setName(request.getName());
         if (request.getDescription() != null) project.setDescription(request.getDescription());
@@ -144,14 +147,14 @@ public class ProjectService {
         
         if (request.getLeaderId() != null && !request.getLeaderId().isBlank()) {
             ResearchAssistant leader = memberRepository.findById(request.getLeaderId())
-                    .orElseThrow(() -> new RuntimeException("Leader tidak ditemukan"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Leader tidak ditemukan"));
             project.setLeader(leader);
         }
         
         if (request.getTeamMemberIds() != null) {
             Set<ResearchAssistant> teamMembers = request.getTeamMemberIds().stream()
                     .map(memberId -> memberRepository.findById(memberId)
-                            .orElseThrow(() -> new RuntimeException("Member tidak ditemukan")))
+                            .orElseThrow(() -> new ResourceNotFoundException("Member tidak ditemukan: " + memberId)))
                     .collect(Collectors.toSet());
             project.setTeamMembers(teamMembers);
         }
@@ -170,12 +173,12 @@ public class ProjectService {
     @Transactional
     public void deleteProject(String id) {
         Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Project tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Project tidak ditemukan"));
         String projectName = project.getName();
         String projectCode = project.getProjectCode();
         
         if (!archiveRepository.findByProjectId(id).isEmpty()) {
-            throw new RuntimeException("Gagal menghapus: Proyek ini memiliki arsip (dokumen/publikasi) yang terhubung. Hapus arsip terkait terlebih dahulu.");
+            throw new BusinessValidationException("Gagal menghapus: Proyek ini memiliki arsip (dokumen/publikasi) yang terhubung. Hapus arsip terkait terlebih dahulu.");
         }
         
         project.getTeamMembers().clear();
@@ -193,13 +196,13 @@ public class ProjectService {
     @Transactional
     public ProjectResponse addMember(String projectId, String memberId) {
         Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new RuntimeException("Project tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Project tidak ditemukan"));
         
         ResearchAssistant member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new RuntimeException("Member tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Member tidak ditemukan"));
         
         if (project.getTeamMembers().contains(member)) {
-            throw new RuntimeException("Member sudah terdaftar di project ini");
+            throw new BusinessValidationException("Member sudah terdaftar di project ini");
         }
         
         project.getTeamMembers().add(member);
@@ -210,13 +213,13 @@ public class ProjectService {
     @Transactional
     public ProjectResponse removeMember(String projectId, String memberId) {
         Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new RuntimeException("Project tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Project tidak ditemukan"));
         
         ResearchAssistant member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new RuntimeException("Member tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Member tidak ditemukan"));
         
         if (!project.getTeamMembers().contains(member)) {
-            throw new RuntimeException("Member tidak terdaftar di project ini");
+            throw new BusinessValidationException("Member tidak terdaftar di project ini");
         }
         
         project.getTeamMembers().remove(member);
@@ -226,7 +229,7 @@ public class ProjectService {
     
     public List<ProjectResponse.MemberSummary> getProjectMembers(String projectId) {
         Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new RuntimeException("Project tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Project tidak ditemukan"));
         
         return project.getTeamMembers().stream()
                 .map(member -> ProjectResponse.MemberSummary.builder()
@@ -243,10 +246,10 @@ public class ProjectService {
     @Transactional
     public ProjectResponse approveProject(String id, String approvedByUsername) {
         Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Project tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Project tidak ditemukan"));
         
         if (!"PENDING".equals(project.getApprovalStatus())) {
-            throw new RuntimeException("Project sudah diproses sebelumnya");
+            throw new BusinessValidationException("Project sudah diproses sebelumnya (Status: " + project.getApprovalStatus() + ")");
         }
         
         verifyApprovalPermission(project, approvedByUsername);
@@ -267,10 +270,10 @@ public class ProjectService {
     @Transactional
     public ProjectResponse rejectProject(String id, String rejectionReason, String rejectedByUsername) {
         Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Project tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Project tidak ditemukan"));
         
         if (!"PENDING".equals(project.getApprovalStatus())) {
-            throw new RuntimeException("Project sudah diproses sebelumnya");
+            throw new BusinessValidationException("Project sudah diproses sebelumnya (Status: " + project.getApprovalStatus() + ")");
         }
         
         verifyApprovalPermission(project, rejectedByUsername);
@@ -290,7 +293,7 @@ public class ProjectService {
     
     private void verifyApprovalPermission(Project project, String username) {
         ResearchAssistant approver = memberRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User approval tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("User approval tidak ditemukan"));
         
         // ADMIN & RESEARCH_COORD can approve everything
         if (memberRoleRepository.existsByMemberIdAndRole(approver.getId(), Role.ADMIN) ||
@@ -307,13 +310,13 @@ public class ProjectService {
             String approverDiv = approver.getExpertDivision() != null ? approver.getExpertDivision().trim() : "";
             
             if (!projectDiv.equalsIgnoreCase(approverDiv)) {
-                throw new RuntimeException("Anda hanya dapat menyetujui proyek di divisi Anda (" + approverDiv + ")");
+                throw new AccessDeniedException("Anda hanya dapat menyetujui proyek di divisi Anda (" + approverDiv + ")");
             }
             return;
         }
         
         // If not one of the above roles
-        throw new RuntimeException("Anda tidak memiliki akses untuk menyetujui proyek ini");
+        throw new AccessDeniedException("Anda tidak memiliki akses untuk menyetujui proyek ini");
     }
 
     // ========== HELPER: Convert to Response DTO ==========

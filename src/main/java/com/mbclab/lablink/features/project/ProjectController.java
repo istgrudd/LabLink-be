@@ -38,8 +38,11 @@ public class ProjectController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String periodId) {
         if (periodId != null && !periodId.isBlank()) {
-            // For period filter, return unpaginated (keep existing behavior)
-            return ResponseEntity.ok(null); // Handle separately
+            List<ProjectResponse> all = projectService.getProjectsByPeriod(periodId);
+            org.springframework.data.domain.Pageable pageableReq = org.springframework.data.domain.PageRequest.of(page, size);
+            int start = Math.min((int)pageableReq.getOffset(), all.size());
+            int end = Math.min((start + size), all.size());
+            return ResponseEntity.ok(new org.springframework.data.domain.PageImpl<>(all.subList(start, end), pageableReq, all.size()));
         }
         return ResponseEntity.ok(projectService.getAllProjects(page, size));
     }

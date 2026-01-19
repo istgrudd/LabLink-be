@@ -1,5 +1,7 @@
 package com.mbclab.lablink.features.member;
 
+
+import com.mbclab.lablink.shared.exception.ResourceNotFoundException;
 import com.mbclab.lablink.features.activitylog.AuditEvent;
 import com.mbclab.lablink.features.member.dto.AssignRolesRequest;
 import com.mbclab.lablink.features.member.dto.CreateMemberRequest;
@@ -43,7 +45,7 @@ public class MemberService {
     @Transactional
     public MemberResponse createResearchAssistant(CreateMemberRequest request) {
         if (memberRepository.existsByUsername(request.getNim())) {
-            throw new RuntimeException("Member dengan NIM " + request.getNim() + " sudah ada!");
+            throw new com.mbclab.lablink.shared.exception.BusinessValidationException("Member dengan NIM " + request.getNim() + " sudah ada!");
         }
 
         ResearchAssistant newMember = new ResearchAssistant();
@@ -93,13 +95,13 @@ public class MemberService {
 
     public MemberResponse getMemberByNim(String nim) {
         ResearchAssistant member = memberRepository.findByUsername(nim)
-                .orElseThrow(() -> new RuntimeException("Member dengan NIM " + nim + " tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Member dengan NIM " + nim + " tidak ditemukan"));
         return toResponse(member);
     }
 
     public MemberResponse getMemberById(String id) {
         ResearchAssistant member = memberRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Member tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Member tidak ditemukan"));
         return toResponse(member);
     }
 
@@ -108,7 +110,7 @@ public class MemberService {
     @Transactional
     public MemberResponse updateMember(String id, UpdateMemberRequest request) {
         ResearchAssistant member = memberRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Member dengan ID " + id + " tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Member dengan ID " + id + " tidak ditemukan"));
 
         if (request.getFullName() != null && !request.getFullName().isBlank()) {
             member.setFullName(request.getFullName());
@@ -137,7 +139,7 @@ public class MemberService {
     @Transactional 
     public void deleteMember(String id) {
         ResearchAssistant member = memberRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Member ID " + id + " tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Member ID " + id + " tidak ditemukan"));
         String name = member.getFullName();
         String nim = member.getUsername();
         
@@ -220,7 +222,7 @@ public class MemberService {
     // ========== HELPER ==========
     
     private MemberResponse toResponse(ResearchAssistant member) {
-        List<MemberResponse.RoleInfo> roles = memberRoleRepository.findByMemberId(member.getId()).stream()
+        List<MemberResponse.RoleInfo> roles = member.getMemberRoles().stream()
                 .map(mr -> MemberResponse.RoleInfo.builder()
                         .role(mr.getRole().name())
                         .displayName(mr.getRole().getDisplayName())

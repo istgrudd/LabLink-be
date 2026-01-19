@@ -10,5 +10,15 @@ public interface MemberRepository extends JpaRepository<ResearchAssistant, Strin
     boolean existsByUsername(String username);
     
     // Cari member berdasarkan NIM (Username)
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "memberRoles")
     Optional<ResearchAssistant> findByUsername(String username);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "memberRoles")
+    Optional<ResearchAssistant> findById(String id);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "memberRoles")
+    org.springframework.data.domain.Page<ResearchAssistant> findAll(org.springframework.data.domain.Pageable pageable);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "memberRoles")
+    java.util.List<ResearchAssistant> findAll();
 }

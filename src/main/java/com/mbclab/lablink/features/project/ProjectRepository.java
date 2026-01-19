@@ -9,12 +9,24 @@ import java.util.Optional;
 @Repository
 public interface ProjectRepository extends JpaRepository<Project, String> {
     
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"leader", "teamMembers"})
+    org.springframework.data.domain.Page<Project> findAll(org.springframework.data.domain.Pageable pageable);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"leader", "teamMembers"})
+    List<Project> findAll();
+
     List<Project> findByStatus(String status);
     List<Project> findByDivision(String division);
     List<Project> findByActivityType(String activityType);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"leader", "teamMembers"})
     List<Project> findByPeriodId(String periodId);
     
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"leader", "teamMembers"})
     Optional<Project> findByProjectCode(String projectCode);
+    
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"leader", "teamMembers"})
+    Optional<Project> findById(String id);
     
     // Untuk generate project code
     long countByActivityType(String activityType);
@@ -23,12 +35,13 @@ public interface ProjectRepository extends JpaRepository<Project, String> {
     int countByPeriodId(String periodId);
     
     // For cascade delete
-    // For cascade delete
     void deleteByPeriodId(String periodId);
     
     // For orphan filter
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"leader", "teamMembers"})
     List<Project> findByPeriodIsNull();
     
     // For approval workflow
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"leader", "teamMembers"})
     List<Project> findByApprovalStatus(String approvalStatus);
 }

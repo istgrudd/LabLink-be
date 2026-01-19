@@ -181,6 +181,9 @@ public class FinanceService {
         FinanceCategory category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new RuntimeException("Kategori tidak ditemukan"));
         
+        AcademicPeriod activePeriod = periodRepository.findByIsActiveTrue()
+                .orElseThrow(() -> new RuntimeException("Tidak ada periode aktif. Transaksi harus tercatat dalam periode aktif."));
+
         FinanceTransaction tx = new FinanceTransaction();
         tx.setType(request.getType());
         tx.setCategory(category);
@@ -189,6 +192,7 @@ public class FinanceService {
         tx.setDescription(request.getDescription());
         tx.setReceiptPath(receiptPath);
         tx.setCreatedBy(createdBy);
+        tx.setPeriod(activePeriod); // Enforce Period-Centric logic
         
         // Cost center
         if (request.getEventId() != null) {
