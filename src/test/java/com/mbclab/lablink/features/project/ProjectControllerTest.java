@@ -113,7 +113,7 @@ class ProjectControllerTest {
         request.setStatus("IN_PROGRESS");
         request.setProgressPercent(50);
 
-        ProjectResponse response = projectService.updateProject(createdProjectId, request);
+        ProjectResponse response = projectService.updateProject(createdProjectId, request, "PROJECTTEST001");
 
         assertEquals("Updated Project Name", response.getName());
         assertEquals("IN_PROGRESS", response.getStatus());

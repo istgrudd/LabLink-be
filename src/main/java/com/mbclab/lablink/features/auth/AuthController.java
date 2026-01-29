@@ -5,6 +5,8 @@ import com.mbclab.lablink.features.auth.dto.LoginRequest;
 import com.mbclab.lablink.features.auth.dto.LoginResponse;
 import com.mbclab.lablink.features.member.dto.UpdateMemberRequest;
 import com.mbclab.lablink.features.member.MemberService;
+import com.mbclab.lablink.shared.exception.AuthenticationException;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,7 +20,7 @@ public class AuthController {
     private final MemberService memberService;
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         LoginResponse response = authService.login(request);
         return ResponseEntity.ok(response);
     }
@@ -27,7 +29,7 @@ public class AuthController {
     public ResponseEntity<LoginResponse.UserInfo> getCurrentUser(
             @RequestHeader("Authorization") String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new RuntimeException("Token tidak valid");
+            throw new AuthenticationException("Token tidak valid");
         }
         
         String token = authHeader.substring(7);
@@ -45,9 +47,9 @@ public class AuthController {
     @PutMapping("/change-password")
     public ResponseEntity<?> changePassword(
             @RequestHeader("Authorization") String authHeader,
-            @RequestBody ChangePasswordRequest request) {
+            @Valid @RequestBody ChangePasswordRequest request) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new RuntimeException("Token tidak valid");
+            throw new AuthenticationException("Token tidak valid");
         }
         
         String token = authHeader.substring(7);
@@ -61,9 +63,9 @@ public class AuthController {
     @PutMapping("/profile")
     public ResponseEntity<?> updateProfile(
             @RequestHeader("Authorization") String authHeader,
-            @RequestBody UpdateMemberRequest request) {
+            @Valid @RequestBody UpdateMemberRequest request) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new RuntimeException("Token tidak valid");
+            throw new AuthenticationException("Token tidak valid");
         }
         
         String token = authHeader.substring(7);

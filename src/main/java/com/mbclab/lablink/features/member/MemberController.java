@@ -8,6 +8,7 @@ import com.mbclab.lablink.features.member.dto.MemberResponse;
 import com.mbclab.lablink.features.member.dto.RoleResponse;
 import com.mbclab.lablink.features.member.dto.UpdateMemberRequest;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -28,7 +29,7 @@ public class MemberController {
     
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<MemberResponse> createMember(@RequestBody CreateMemberRequest request) {
+    public ResponseEntity<MemberResponse> createMember(@Valid @RequestBody CreateMemberRequest request) {
         return ResponseEntity.ok(memberService.createResearchAssistant(request));
     }
 
@@ -66,7 +67,7 @@ public class MemberController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<MemberResponse> updateMember(
             @PathVariable String id, 
-            @RequestBody UpdateMemberRequest request) {
+            @Valid @RequestBody UpdateMemberRequest request) {
         return ResponseEntity.ok(memberService.updateMember(id, request));
     }
 
@@ -98,7 +99,7 @@ public class MemberController {
     public ResponseEntity<MemberResponse> assignRoles(
             @PathVariable String id,
             @RequestHeader("Authorization") String authHeader,
-            @RequestBody AssignRolesRequest request) {
+            @Valid @RequestBody AssignRolesRequest request) {
         String token = authHeader.substring(7);
         AppUser admin = authService.validateToken(token);
         return ResponseEntity.ok(memberService.assignRoles(id, request, admin.getUsername()));

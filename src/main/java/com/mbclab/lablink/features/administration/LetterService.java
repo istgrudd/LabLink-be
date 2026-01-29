@@ -7,6 +7,8 @@ import com.mbclab.lablink.features.member.ResearchAssistant;
 import com.mbclab.lablink.features.member.MemberRepository;
 import com.mbclab.lablink.features.period.AcademicPeriodRepository;
 import com.mbclab.lablink.features.administration.dto.*;
+import com.mbclab.lablink.shared.exception.BusinessValidationException;
+import com.mbclab.lablink.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -64,7 +66,7 @@ public class LetterService {
         // Link to event if provided
         if (request.getEventId() != null && !request.getEventId().isBlank()) {
             Event event = eventRepository.findById(request.getEventId())
-                    .orElseThrow(() -> new RuntimeException("Event tidak ditemukan"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Event tidak ditemukan"));
             letter.setEvent(event);
         }
         
@@ -84,10 +86,10 @@ public class LetterService {
     @Transactional
     public LetterResponse approveLetter(String id) {
         Letter letter = letterRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Surat tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Surat tidak ditemukan"));
         
         if (!"PENDING".equals(letter.getStatus())) {
-            throw new RuntimeException("Hanya surat dengan status PENDING yang bisa disetujui");
+            throw new BusinessValidationException("Hanya surat dengan status PENDING yang bisa disetujui");
         }
         
         // Set issue date = today (tanggal surat = tanggal disetujui)
@@ -119,10 +121,10 @@ public class LetterService {
     @Transactional
     public LetterResponse rejectLetter(String id, String reason) {
         Letter letter = letterRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Surat tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Surat tidak ditemukan"));
         
         if (!"PENDING".equals(letter.getStatus())) {
-            throw new RuntimeException("Hanya surat dengan status PENDING yang bisa ditolak");
+            throw new BusinessValidationException("Hanya surat dengan status PENDING yang bisa ditolak");
         }
         
         letter.setStatus("REJECTED");
@@ -154,20 +156,20 @@ public class LetterService {
 
     public LetterResponse getLetterById(String id) {
         Letter letter = letterRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Surat tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Surat tidak ditemukan"));
         return toResponse(letter);
     }
 
     public LetterResponse getLetterByNumber(String letterNumber) {
         Letter letter = letterRepository.findByLetterNumber(letterNumber)
-                .orElseThrow(() -> new RuntimeException("Surat tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Surat tidak ditemukan"));
         return toResponse(letter);
     }
 
     @Transactional
     public void deleteLetter(String id) {
         Letter letter = letterRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Surat tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Surat tidak ditemukan"));
         String subject = letter.getSubject();
         String number = letter.getLetterNumber();
         
@@ -204,14 +206,14 @@ public class LetterService {
 
     public IncomingLetterResponse getIncomingLetterById(String id) {
         IncomingLetter letter = incomingLetterRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Surat masuk tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Surat masuk tidak ditemukan"));
         return toIncomingResponse(letter);
     }
 
     @Transactional
     public void deleteIncomingLetter(String id) {
         if (!incomingLetterRepository.existsById(id)) {
-            throw new RuntimeException("Surat masuk tidak ditemukan");
+            throw new ResourceNotFoundException("Surat masuk tidak ditemukan");
         }
         incomingLetterRepository.deleteById(id);
     }

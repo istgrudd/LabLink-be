@@ -1,13 +1,13 @@
 package com.mbclab.lablink.features.project;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.mbclab.lablink.shared.approval.ApprovalRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface ProjectRepository extends JpaRepository<Project, String> {
+public interface ProjectRepository extends ApprovalRepository<Project, String> {
     
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"leader", "teamMembers"})
     org.springframework.data.domain.Page<Project> findAll(org.springframework.data.domain.Pageable pageable);
