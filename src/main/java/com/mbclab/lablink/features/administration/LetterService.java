@@ -221,36 +221,42 @@ public class LetterService {
     // ==================== HELPERS ====================
     
     private LetterResponse toResponse(Letter letter) {
-        LetterResponse.EventSummary eventSummary = null;
-        if (letter.getEvent() != null) {
-            eventSummary = LetterResponse.EventSummary.builder()
-                    .id(letter.getEvent().getId())
-                    .eventCode(letter.getEvent().getEventCode())
-                    .name(letter.getEvent().getName())
+        try {
+            LetterResponse.EventSummary eventSummary = null;
+            if (letter.getEvent() != null) {
+                eventSummary = LetterResponse.EventSummary.builder()
+                        .id(letter.getEvent().getId())
+                        .eventCode(letter.getEvent().getEventCode())
+                        .name(letter.getEvent().getName())
+                        .build();
+            }
+            
+            return LetterResponse.builder()
+                    .id(letter.getId())
+                    .letterNumber(letter.getLetterNumber())
+                    .letterType(letter.getLetterType())
+                    .category(letter.getCategory())
+                    .subject(letter.getSubject())
+                    .recipient(letter.getRecipient())
+                    .content(letter.getContent())
+                    .attachment(letter.getAttachment())
+                    .requesterName(letter.getRequesterName())
+                    .requesterNim(letter.getRequesterNim())
+                    .borrowDate(letter.getBorrowDate())
+                    .borrowReturnDate(letter.getBorrowReturnDate())
+                    .issueDate(letter.getIssueDate())
+                    .status(letter.getStatus())
+                    .approvedBy(letter.getApprovedBy())
+                    .rejectionReason(letter.getRejectionReason())
+                    .event(eventSummary)
+                    .createdAt(letter.getCreatedAt())
+                    .updatedAt(letter.getUpdatedAt())
                     .build();
+        } catch (Exception e) {
+            System.err.println("ERROR converting Letter ID: " + letter.getId() + " - " + e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
-        
-        return LetterResponse.builder()
-                .id(letter.getId())
-                .letterNumber(letter.getLetterNumber())
-                .letterType(letter.getLetterType())
-                .category(letter.getCategory())
-                .subject(letter.getSubject())
-                .recipient(letter.getRecipient())
-                .content(letter.getContent())
-                .attachment(letter.getAttachment())
-                .requesterName(letter.getRequesterName())
-                .requesterNim(letter.getRequesterNim())
-                .borrowDate(letter.getBorrowDate())
-                .borrowReturnDate(letter.getBorrowReturnDate())
-                .issueDate(letter.getIssueDate())
-                .status(letter.getStatus())
-                .approvedBy(letter.getApprovedBy())
-                .rejectionReason(letter.getRejectionReason())
-                .event(eventSummary)
-                .createdAt(letter.getCreatedAt())
-                .updatedAt(letter.getUpdatedAt())
-                .build();
     }
 
     private IncomingLetterResponse toIncomingResponse(IncomingLetter letter) {
