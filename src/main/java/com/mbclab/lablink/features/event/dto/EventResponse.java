@@ -24,6 +24,12 @@ public class EventResponse extends BaseResponse {
     private LocalDate endDate;
     private String status;
     
+    // ========== APPROVAL WORKFLOW ==========
+    private String approvalStatus;      // PENDING, APPROVED, REJECTED
+    private String rejectionReason;
+    private LocalDate approvedAt;
+    private String approvedBy;
+    
     // PIC summary
     private MemberSummary pic;
     

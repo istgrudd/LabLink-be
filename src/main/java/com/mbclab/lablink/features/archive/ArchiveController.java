@@ -1,6 +1,7 @@
 package com.mbclab.lablink.features.archive;
 
 import com.mbclab.lablink.features.archive.dto.*;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,7 +20,7 @@ public class ArchiveController {
     
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'TECH_OPS')")
-    public ResponseEntity<ArchiveResponse> createArchive(@RequestBody CreateArchiveRequest request) {
+    public ResponseEntity<ArchiveResponse> createArchive(@Valid @RequestBody CreateArchiveRequest request) {
         ArchiveResponse created = archiveService.createArchive(request);
         return ResponseEntity.ok(created);
     }
@@ -74,7 +75,7 @@ public class ArchiveController {
     @PreAuthorize("hasAnyRole('ADMIN', 'TECH_OPS')")
     public ResponseEntity<ArchiveResponse> updateArchive(
             @PathVariable String id,
-            @RequestBody UpdateArchiveRequest request) {
+            @Valid @RequestBody UpdateArchiveRequest request) {
         ArchiveResponse updated = archiveService.updateArchive(id, request);
         return ResponseEntity.ok(updated);
     }

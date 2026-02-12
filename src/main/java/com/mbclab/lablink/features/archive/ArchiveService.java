@@ -7,6 +7,8 @@ import com.mbclab.lablink.features.event.EventRepository;
 import com.mbclab.lablink.features.period.AcademicPeriodRepository;
 import com.mbclab.lablink.features.project.Project;
 import com.mbclab.lablink.features.project.ProjectRepository;
+import com.mbclab.lablink.shared.exception.BusinessValidationException;
+import com.mbclab.lablink.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -59,28 +61,28 @@ public class ArchiveService {
         // Set source and department
         if ("PROJECT".equals(sourceType)) {
             Project project = projectRepository.findById(request.getProjectId())
-                    .orElseThrow(() -> new RuntimeException("Project tidak ditemukan"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Project tidak ditemukan"));
             
             // Validate project is completed
             if (!"COMPLETED".equals(project.getStatus())) {
-                throw new RuntimeException("Project harus berstatus COMPLETED untuk membuat arsip");
+                throw new BusinessValidationException("Project harus berstatus COMPLETED untuk membuat arsip");
             }
             
             archive.setProject(project);
             archive.setDepartment("INTERNAL");
         } else if ("EVENT".equals(sourceType)) {
             Event event = eventRepository.findById(request.getEventId())
-                    .orElseThrow(() -> new RuntimeException("Event tidak ditemukan"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Event tidak ditemukan"));
             
             // Validate event is completed
             if (!"COMPLETED".equals(event.getStatus())) {
-                throw new RuntimeException("Event harus berstatus COMPLETED untuk membuat arsip");
+                throw new BusinessValidationException("Event harus berstatus COMPLETED untuk membuat arsip");
             }
             
             archive.setEvent(event);
             archive.setDepartment("EKSTERNAL");
         } else {
-            throw new RuntimeException("Source type tidak valid: " + sourceType);
+            throw new BusinessValidationException("Source type tidak valid: " + sourceType);
         }
         
         // Auto-assign to active period
@@ -118,13 +120,13 @@ public class ArchiveService {
 
     public ArchiveResponse getArchiveById(String id) {
         Archive archive = archiveRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Archive tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Archive tidak ditemukan"));
         return toResponse(archive);
     }
 
     public ArchiveResponse getArchiveByCode(String archiveCode) {
         Archive archive = archiveRepository.findByArchiveCode(archiveCode)
-                .orElseThrow(() -> new RuntimeException("Archive tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Archive tidak ditemukan"));
         return toResponse(archive);
     }
 
@@ -151,7 +153,7 @@ public class ArchiveService {
     @Transactional
     public ArchiveResponse updateArchive(String id, UpdateArchiveRequest request) {
         Archive archive = archiveRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Archive tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Archive tidak ditemukan"));
         
         // Partial update
         if (request.getTitle() != null && !request.getTitle().isBlank()) {
@@ -185,7 +187,7 @@ public class ArchiveService {
     @Transactional
     public void deleteArchive(String id) {
         Archive archive = archiveRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Archive tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Archive tidak ditemukan"));
         String title = archive.getTitle();
         String code = archive.getArchiveCode();
         
@@ -202,10 +204,10 @@ public class ArchiveService {
     
     private void validateArchiveType(String sourceType, String archiveType) {
         if ("PROJECT".equals(sourceType) && !PROJECT_TYPES.contains(archiveType)) {
-            throw new RuntimeException("Archive type untuk Project harus: PUBLIKASI, HKI, atau PKM");
+            throw new BusinessValidationException("Archive type untuk Project harus: PUBLIKASI, HKI, atau PKM");
         }
         if ("EVENT".equals(sourceType) && !EVENT_TYPES.contains(archiveType)) {
-            throw new RuntimeException("Archive type untuk Event harus: LAPORAN atau SERTIFIKAT");
+            throw new BusinessValidationException("Archive type untuk Event harus: LAPORAN atau SERTIFIKAT");
         }
     }
 

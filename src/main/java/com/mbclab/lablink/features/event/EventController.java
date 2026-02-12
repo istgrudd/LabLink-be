@@ -1,10 +1,12 @@
 package com.mbclab.lablink.features.event;
 
 import com.mbclab.lablink.features.event.dto.*;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -20,8 +22,9 @@ public class EventController {
     // ========== CREATE ==========
     
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<EventResponse> createEvent(@RequestBody CreateEventRequest request) {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<EventResponse> createEvent(@Valid @RequestBody CreateEventRequest request) {
+        // All authenticated users can submit events (status will be PENDING)
         EventResponse created = eventService.createEvent(request);
         return ResponseEntity.ok(created);
     }
@@ -55,10 +58,10 @@ public class EventController {
     // ========== UPDATE ==========
     
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'HRD')")
     public ResponseEntity<EventResponse> updateEvent(
             @PathVariable String id,
-            @RequestBody UpdateEventRequest request) {
+            @Valid @RequestBody UpdateEventRequest request) {
         EventResponse updated = eventService.updateEvent(id, request);
         return ResponseEntity.ok(updated);
     }
@@ -66,10 +69,39 @@ public class EventController {
     // ========== DELETE ==========
     
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'HRD')")
     public ResponseEntity<Void> deleteEvent(@PathVariable String id) {
         eventService.deleteEvent(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // ========== APPROVAL WORKFLOW ==========
+    
+    @GetMapping("/pending")
+    @PreAuthorize("hasAnyRole('ADMIN', 'HRD')")
+    public ResponseEntity<List<EventResponse>> getPendingEvents() {
+        return ResponseEntity.ok(eventService.getPendingEvents());
+    }
+    
+    @PostMapping("/{id}/approve")
+    @PreAuthorize("hasAnyRole('ADMIN', 'HRD')")
+    public ResponseEntity<EventResponse> approveEvent(
+            @PathVariable String id,
+            Authentication authentication) {
+        String approvedBy = authentication.getName();
+        EventResponse approved = eventService.approveEvent(id, approvedBy);
+        return ResponseEntity.ok(approved);
+    }
+    
+    @PostMapping("/{id}/reject")
+    @PreAuthorize("hasAnyRole('ADMIN', 'HRD')")
+    public ResponseEntity<EventResponse> rejectEvent(
+            @PathVariable String id,
+            @RequestBody RejectEventRequest request,
+            Authentication authentication) {
+        String rejectedBy = authentication.getName();
+        EventResponse rejected = eventService.rejectEvent(id, request.getRejectionReason(), rejectedBy);
+        return ResponseEntity.ok(rejected);
     }
 
     // ========== COMMITTEE MANAGEMENT ==========
@@ -78,7 +110,7 @@ public class EventController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<EventResponse> addCommitteeMember(
             @PathVariable String id,
-            @RequestBody AddCommitteeRequest request) {
+            @Valid @RequestBody AddCommitteeRequest request) {
         EventResponse updated = eventService.addCommitteeMember(id, request);
         return ResponseEntity.ok(updated);
     }
@@ -114,7 +146,7 @@ public class EventController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<EventScheduleResponse> addSchedule(
             @PathVariable String eventId,
-            @RequestBody EventScheduleRequest request) {
+            @Valid @RequestBody EventScheduleRequest request) {
         EventScheduleResponse created = eventService.addSchedule(eventId, request);
         return ResponseEntity.ok(created);
     }
@@ -129,7 +161,7 @@ public class EventController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<EventScheduleResponse> updateSchedule(
             @PathVariable String scheduleId,
-            @RequestBody EventScheduleRequest request) {
+            @Valid @RequestBody EventScheduleRequest request) {
         EventScheduleResponse updated = eventService.updateSchedule(scheduleId, request);
         return ResponseEntity.ok(updated);
     }

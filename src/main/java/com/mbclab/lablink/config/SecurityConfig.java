@@ -39,7 +39,7 @@ public class SecurityConfig {
                 .requestMatchers("/error").permitAll()
                 
                 // Opsional: Izinkan Swagger jika pakai
-                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/v3/api-docs.yaml").permitAll()
                 
                 // Sisanya wajib Login
                 .anyRequest().authenticated()

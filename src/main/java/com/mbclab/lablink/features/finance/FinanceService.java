@@ -10,6 +10,8 @@ import com.mbclab.lablink.features.period.AcademicPeriod;
 import com.mbclab.lablink.features.period.AcademicPeriodRepository;
 import com.mbclab.lablink.features.project.Project;
 import com.mbclab.lablink.features.project.ProjectRepository;
+import com.mbclab.lablink.shared.exception.BusinessValidationException;
+import com.mbclab.lablink.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -45,7 +47,7 @@ public class FinanceService {
     @Transactional
     public CategoryResponse createCategory(CategoryRequest request) {
         if (categoryRepository.existsByName(request.getName())) {
-            throw new RuntimeException("Kategori dengan nama '" + request.getName() + "' sudah ada");
+            throw new BusinessValidationException("Kategori dengan nama '" + request.getName() + "' sudah ada");
         }
         
         FinanceCategory category = new FinanceCategory();
@@ -77,7 +79,7 @@ public class FinanceService {
     @Transactional
     public CategoryResponse updateCategory(String id, CategoryRequest request) {
         FinanceCategory category = categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Kategori tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Kategori tidak ditemukan"));
         
         if (request.getName() != null) category.setName(request.getName());
         if (request.getType() != null) category.setType(request.getType());
@@ -95,7 +97,7 @@ public class FinanceService {
     @Transactional
     public void deleteCategory(String id) {
         FinanceCategory category = categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Kategori tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Kategori tidak ditemukan"));
         
         category.setActive(false);
         categoryRepository.save(category);
@@ -110,15 +112,15 @@ public class FinanceService {
     @Transactional
     public DuesPaymentResponse submitDuesPayment(String memberId, DuesPaymentRequest request, String proofPath) {
         ResearchAssistant member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new RuntimeException("Member tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Member tidak ditemukan"));
         
         AcademicPeriod period = periodRepository.findByIsActiveTrue()
-                .orElseThrow(() -> new RuntimeException("Tidak ada periode aktif"));
+                .orElseThrow(() -> new ResourceNotFoundException("Tidak ada periode aktif"));
         
         // Check if already paid for this month
         if (duesRepository.findByMemberIdAndPaymentMonthAndPaymentYear(
                 memberId, request.getPaymentMonth(), request.getPaymentYear()).isPresent()) {
-            throw new RuntimeException("Pembayaran untuk bulan ini sudah ada");
+            throw new BusinessValidationException("Pembayaran untuk bulan ini sudah ada");
         }
         
         DuesPayment dues = new DuesPayment();
@@ -161,7 +163,7 @@ public class FinanceService {
     @Transactional
     public DuesPaymentResponse verifyDuesPayment(String id, String adminUsername) {
         DuesPayment dues = duesRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Pembayaran tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Pembayaran tidak ditemukan"));
         
         dues.setStatus("VERIFIED");
         dues.setVerifiedBy(adminUsername);
@@ -180,10 +182,10 @@ public class FinanceService {
     @Transactional
     public TransactionResponse createTransaction(TransactionRequest request, String receiptPath, String createdBy) {
         FinanceCategory category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new RuntimeException("Kategori tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Kategori tidak ditemukan"));
         
         AcademicPeriod activePeriod = periodRepository.findByIsActiveTrue()
-                .orElseThrow(() -> new RuntimeException("Tidak ada periode aktif. Transaksi harus tercatat dalam periode aktif."));
+                .orElseThrow(() -> new ResourceNotFoundException("Tidak ada periode aktif. Transaksi harus tercatat dalam periode aktif."));
 
         FinanceTransaction tx = new FinanceTransaction();
         tx.setType(request.getType());
@@ -198,12 +200,12 @@ public class FinanceService {
         // Cost center
         if (request.getEventId() != null) {
             Event event = eventRepository.findById(request.getEventId())
-                    .orElseThrow(() -> new RuntimeException("Event tidak ditemukan"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Event tidak ditemukan"));
             tx.setEvent(event);
         }
         if (request.getProjectId() != null) {
             Project project = projectRepository.findById(request.getProjectId())
-                    .orElseThrow(() -> new RuntimeException("Project tidak ditemukan"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Project tidak ditemukan"));
             tx.setProject(project);
         }
         
@@ -251,12 +253,12 @@ public class FinanceService {
     @Transactional
     public TransactionResponse updateTransaction(String id, TransactionRequest request) {
         FinanceTransaction tx = transactionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Transaksi tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Transaksi tidak ditemukan"));
         
         if (request.getType() != null) tx.setType(request.getType());
         if (request.getCategoryId() != null) {
             FinanceCategory category = categoryRepository.findById(request.getCategoryId())
-                    .orElseThrow(() -> new RuntimeException("Kategori tidak ditemukan"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Kategori tidak ditemukan"));
             tx.setCategory(category);
         }
         if (request.getAmount() != null) tx.setAmount(request.getAmount());
@@ -275,7 +277,7 @@ public class FinanceService {
     @Transactional
     public void deleteTransaction(String id) {
         FinanceTransaction tx = transactionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Transaksi tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Transaksi tidak ditemukan"));
         
         transactionRepository.delete(tx);
         
@@ -289,7 +291,7 @@ public class FinanceService {
     @Transactional
     public ProcurementResponse createProcurementRequest(String requesterId, ProcurementRequestDto request) {
         ResearchAssistant requester = memberRepository.findById(requesterId)
-                .orElseThrow(() -> new RuntimeException("Member tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Member tidak ditemukan"));
         
         ProcurementRequest pr = new ProcurementRequest();
         pr.setRequester(requester);
@@ -329,10 +331,10 @@ public class FinanceService {
     @Transactional
     public ProcurementResponse approveProcurement(String id, String adminUsername) {
         ProcurementRequest pr = procurementRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Pengajuan tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Pengajuan tidak ditemukan"));
         
         if (!"PENDING".equals(pr.getStatus())) {
-            throw new RuntimeException("Pengajuan sudah diproses sebelumnya");
+            throw new BusinessValidationException("Pengajuan sudah diproses sebelumnya");
         }
         
         pr.setStatus("APPROVED");
@@ -351,10 +353,10 @@ public class FinanceService {
     @Transactional
     public ProcurementResponse rejectProcurement(String id, String adminUsername, String reason) {
         ProcurementRequest pr = procurementRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Pengajuan tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Pengajuan tidak ditemukan"));
         
         if (!"PENDING".equals(pr.getStatus())) {
-            throw new RuntimeException("Pengajuan sudah diproses sebelumnya");
+            throw new BusinessValidationException("Pengajuan sudah diproses sebelumnya");
         }
         
         pr.setStatus("REJECTED");
@@ -374,15 +376,15 @@ public class FinanceService {
     @Transactional
     public ProcurementResponse markPurchased(String id, String transactionId) {
         ProcurementRequest pr = procurementRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Pengajuan tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Pengajuan tidak ditemukan"));
         
         if (!"APPROVED".equals(pr.getStatus())) {
-            throw new RuntimeException("Pengajuan harus disetujui terlebih dahulu");
+            throw new BusinessValidationException("Pengajuan harus disetujui terlebih dahulu");
         }
         
         if (transactionId != null) {
             FinanceTransaction tx = transactionRepository.findById(transactionId)
-                    .orElseThrow(() -> new RuntimeException("Transaksi tidak ditemukan"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Transaksi tidak ditemukan"));
             pr.setTransaction(tx);
         }
         

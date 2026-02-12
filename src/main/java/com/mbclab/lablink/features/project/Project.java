@@ -3,6 +3,7 @@ package com.mbclab.lablink.features.project;
 import com.mbclab.lablink.features.member.ResearchAssistant;
 import com.mbclab.lablink.features.period.AcademicPeriod;
 import com.mbclab.lablink.shared.BaseEntity;
+import com.mbclab.lablink.shared.approval.Approvable;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -21,7 +22,7 @@ import java.util.Set;
     @Index(name = "idx_project_activity_type", columnList = "activityType"),
     @Index(name = "idx_project_status", columnList = "status")
 })
-public class Project extends BaseEntity {
+public class Project extends BaseEntity implements Approvable {
 
     // Kode proyek untuk display (RST-0001, PKM-0001, dll)
     @Column(nullable = false, unique = true)
@@ -88,4 +89,11 @@ public class Project extends BaseEntity {
     )
     @JsonIgnore
     private Set<ResearchAssistant> teamMembers = new HashSet<>();
+
+    // ========== APPROVABLE INTERFACE ==========
+    
+    @Override
+    public String getDisplayName() {
+        return this.name;
+    }
 }

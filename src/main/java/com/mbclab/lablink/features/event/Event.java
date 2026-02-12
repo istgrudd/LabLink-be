@@ -3,6 +3,7 @@ package com.mbclab.lablink.features.event;
 import com.mbclab.lablink.features.member.ResearchAssistant;
 import com.mbclab.lablink.features.period.AcademicPeriod;
 import com.mbclab.lablink.shared.BaseEntity;
+import com.mbclab.lablink.shared.approval.Approvable;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -17,9 +18,10 @@ import java.util.Set;
 @Table(name = "events", indexes = {
     @Index(name = "idx_event_period_id", columnList = "period_id"),
     @Index(name = "idx_event_start_date", columnList = "startDate"),
-    @Index(name = "idx_event_status", columnList = "status")
+    @Index(name = "idx_event_status", columnList = "status"),
+    @Index(name = "idx_event_approval_status", columnList = "approvalStatus")
 })
-public class Event extends BaseEntity {
+public class Event extends BaseEntity implements Approvable {
 
     @Column(unique = true, nullable = false)
     private String eventCode;  // EVT-0001
@@ -38,6 +40,23 @@ public class Event extends BaseEntity {
 
     @Column(nullable = false)
     private String status = "PLANNED";  // PLANNED, ONGOING, COMPLETED, CANCELLED
+
+    // ========== APPROVAL WORKFLOW ==========
+
+    // Status approval: PENDING, APPROVED, REJECTED
+    @Column(nullable = false)
+    private String approvalStatus = "PENDING";
+
+    // Alasan penolakan (jika REJECTED)
+    private String rejectionReason;
+
+    // Tanggal disetujui
+    private LocalDate approvedAt;
+
+    // User yang approve/reject
+    private String approvedBy;
+
+    // ========== RELASI ==========
 
     // Periode kepengurusan
     @ManyToOne(fetch = FetchType.LAZY)
@@ -60,4 +79,11 @@ public class Event extends BaseEntity {
     @lombok.EqualsAndHashCode.Exclude
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<EventSchedule> schedules = new HashSet<>();
+
+    // ========== APPROVABLE INTERFACE ==========
+    
+    @Override
+    public String getDisplayName() {
+        return this.name;
+    }
 }

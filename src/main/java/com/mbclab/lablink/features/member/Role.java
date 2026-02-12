@@ -13,6 +13,7 @@ public enum Role {
     SECRETARY("Sekretaris", "Manage dan approve pengajuan surat"),
     TREASURER("Bendahara", "Manage dan approve transaksi keuangan"),
     RESEARCH_COORD("Koordinator Riset", "Approve semua project riset/HKI/PKM"),
+    HRD("Human Resource", "Manage dan approve event kegiatan"),
     DIVISION_HEAD("Kepala Divisi", "Approve project dalam divisi masing-masing"),
     TECH_OPS("Technical Operation", "Manage archive dan maintenance sistem"),
     ASSISTANT("Asisten", "Akses dasar untuk asisten biasa");

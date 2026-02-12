@@ -5,6 +5,9 @@ import com.mbclab.lablink.features.auth.dto.LoginRequest;
 import com.mbclab.lablink.features.auth.dto.LoginResponse;
 import com.mbclab.lablink.features.member.MemberRepository;
 import com.mbclab.lablink.features.member.ResearchAssistant;
+import com.mbclab.lablink.shared.exception.AuthenticationException;
+import com.mbclab.lablink.shared.exception.BusinessValidationException;
+import com.mbclab.lablink.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -20,11 +23,11 @@ public class AuthService {
     public LoginResponse login(LoginRequest request) {
         // 1. Find user by username
         ResearchAssistant user = memberRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new RuntimeException("Username atau password salah"));
+                .orElseThrow(() -> new AuthenticationException("Username atau password salah"));
 
         // 2. Check password
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Username atau password salah");
+            throw new AuthenticationException("Username atau password salah");
         }
 
         // 3. Generate JWT token
@@ -51,10 +54,10 @@ public class AuthService {
     public ResearchAssistant validateToken(String token) {
         String username = jwtService.extractUsername(token);
         ResearchAssistant user = memberRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("User tidak ditemukan"));
         
         if (!jwtService.isTokenValid(token, username)) {
-            throw new RuntimeException("Token tidak valid");
+            throw new AuthenticationException("Token tidak valid");
         }
         
         return user;
@@ -63,16 +66,16 @@ public class AuthService {
     public void changePassword(String username, ChangePasswordRequest request) {
         // 1. Find user
         ResearchAssistant user = memberRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("User tidak ditemukan"));
         
         // 2. Verify current password
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
-            throw new RuntimeException("Password saat ini salah");
+            throw new AuthenticationException("Password saat ini salah");
         }
         
         // 3. Validate new password
         if (request.getNewPassword() == null || request.getNewPassword().length() < 6) {
-            throw new RuntimeException("Password baru minimal 6 karakter");
+            throw new BusinessValidationException("Password baru minimal 6 karakter");
         }
         
         // 4. Update password

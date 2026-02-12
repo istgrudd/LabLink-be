@@ -5,6 +5,8 @@ import com.mbclab.lablink.features.event.dto.*;
 import com.mbclab.lablink.features.member.MemberRepository;
 import com.mbclab.lablink.features.member.ResearchAssistant;
 import com.mbclab.lablink.features.period.AcademicPeriodRepository;
+import com.mbclab.lablink.shared.exception.BusinessValidationException;
+import com.mbclab.lablink.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,9 @@ public class EventService {
     private final AcademicPeriodRepository periodRepository;
     private final com.mbclab.lablink.features.archive.ArchiveRepository archiveRepository;
     private final ApplicationEventPublisher eventPublisher;
+    
+    // Delegate approval workflow to specialized service
+    private final EventApprovalService approvalService;
 
     // ========== CREATE ==========
     
@@ -33,7 +38,7 @@ public class EventService {
     public EventResponse createEvent(CreateEventRequest request) {
         // 1. Get PIC
         ResearchAssistant pic = memberRepository.findById(request.getPicId())
-                .orElseThrow(() -> new RuntimeException("PIC tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("PIC tidak ditemukan"));
         
         // 2. Generate code
         String eventCode = eventCodeGenerator.generate();
@@ -59,7 +64,7 @@ public class EventService {
                 // Validate date
                 if (scheduleReq.getActivityDate().isBefore(saved.getStartDate()) || 
                     scheduleReq.getActivityDate().isAfter(saved.getEndDate())) {
-                    throw new RuntimeException("Tanggal jadwal " + scheduleReq.getActivityDate() + 
+                    throw new BusinessValidationException("Tanggal jadwal " + scheduleReq.getActivityDate() + 
                             " diluar rentang event (" + saved.getStartDate() + " - " + saved.getEndDate() + ")");
                 }
                 
@@ -182,7 +187,7 @@ public class EventService {
         
         // Check for archives
         if (!archiveRepository.findByEventId(id).isEmpty()) {
-            throw new RuntimeException("Gagal menghapus: Event ini memiliki arsip (laporan/sertifikat) yang terhubung. Hapus arsip terkait terlebih dahulu.");
+            throw new BusinessValidationException("Gagal menghapus: Event ini memiliki arsip (laporan/sertifikat) yang terhubung. Hapus arsip terkait terlebih dahulu.");
         }
         
         // Manually clear committee to ensure orphan removal works
@@ -199,20 +204,36 @@ public class EventService {
                 "Deleted event: " + eventCode));
     }
 
+    // ========== APPROVAL WORKFLOW (delegated to EventApprovalService) ==========
+    
+    public List<EventResponse> getPendingEvents() {
+        return approvalService.getPending();
+    }
+    
+    @Transactional
+    public EventResponse approveEvent(String id, String approvedByUsername) {
+        return approvalService.approve(id, approvedByUsername);
+    }
+    
+    @Transactional
+    public EventResponse rejectEvent(String id, String rejectionReason, String rejectedByUsername) {
+        return approvalService.reject(id, rejectionReason, rejectedByUsername);
+    }
+
     // ========== COMMITTEE MANAGEMENT ==========
     
     @Transactional
     public EventResponse addCommitteeMember(String eventId, AddCommitteeRequest request) {
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new RuntimeException("Event tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Event tidak ditemukan"));
         
         ResearchAssistant member = memberRepository.findById(request.getMemberId())
-                .orElseThrow(() -> new RuntimeException("Member tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Member tidak ditemukan"));
         
         // Check if already in committee
         EventCommitteeId compositeId = new EventCommitteeId(eventId, request.getMemberId());
         if (committeeRepository.existsById(compositeId)) {
-            throw new RuntimeException("Member sudah terdaftar sebagai panitia");
+            throw new BusinessValidationException("Member sudah terdaftar sebagai panitia");
         }
         
         EventCommittee committee = new EventCommittee(event, member, request.getRole());
@@ -239,7 +260,7 @@ public class EventService {
     public EventResponse updateCommitteeRole(String eventId, String memberId, UpdateCommitteeRoleRequest request) {
         EventCommitteeId compositeId = new EventCommitteeId(eventId, memberId);
         EventCommittee committee = committeeRepository.findById(compositeId)
-                .orElseThrow(() -> new RuntimeException("Panitia tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Panitia tidak ditemukan"));
         
         committee.setRole(request.getRole());
         committeeRepository.save(committee);
@@ -252,7 +273,7 @@ public class EventService {
     public EventResponse removeCommitteeMember(String eventId, String memberId) {
         EventCommitteeId compositeId = new EventCommitteeId(eventId, memberId);
         if (!committeeRepository.existsById(compositeId)) {
-            throw new RuntimeException("Panitia tidak ditemukan");
+            throw new ResourceNotFoundException("Panitia tidak ditemukan");
         }
         committeeRepository.deleteById(compositeId);
         
@@ -270,7 +291,7 @@ public class EventService {
         // Validate date is within event range
         if (request.getActivityDate().isBefore(event.getStartDate()) || 
             request.getActivityDate().isAfter(event.getEndDate())) {
-            throw new RuntimeException("Tanggal kegiatan harus dalam rentang event (" + 
+            throw new BusinessValidationException("Tanggal kegiatan harus dalam rentang event (" + 
                     event.getStartDate() + " - " + event.getEndDate() + ")");
         }
         
@@ -304,7 +325,7 @@ public class EventService {
         if (request.getActivityDate() != null && 
             (request.getActivityDate().isBefore(event.getStartDate()) || 
              request.getActivityDate().isAfter(event.getEndDate()))) {
-            throw new RuntimeException("Tanggal kegiatan harus dalam rentang event (" + 
+            throw new BusinessValidationException("Tanggal kegiatan harus dalam rentang event (" + 
                     event.getStartDate() + " - " + event.getEndDate() + ")");
         }
         
@@ -415,6 +436,10 @@ public class EventService {
                 .startDate(event.getStartDate())
                 .endDate(event.getEndDate())
                 .status(event.getStatus())
+                .approvalStatus(event.getApprovalStatus())
+                .rejectionReason(event.getRejectionReason())
+                .approvedAt(event.getApprovedAt())
+                .approvedBy(event.getApprovedBy())
                 .createdAt(event.getCreatedAt())
                 .updatedAt(event.getUpdatedAt())
                 .pic(picSummary)

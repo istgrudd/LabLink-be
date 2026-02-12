@@ -33,11 +33,14 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final MemberRepository memberRepository;
-    private final MemberRoleRepository memberRoleRepository; // Added for RBAC
+    private final MemberRoleRepository memberRoleRepository;
     private final ProjectCodeGenerator projectCodeGenerator;
     private final AcademicPeriodRepository periodRepository;
     private final com.mbclab.lablink.features.archive.ArchiveRepository archiveRepository;
     private final ApplicationEventPublisher eventPublisher;
+    
+    // Delegate approval workflow to specialized service
+    private final ProjectApprovalService approvalService;
 
     // ... (CREATE, READ, UPDATE, DELETE, MEMBER MANAGEMENT methods remain same) ...
     // Note: I will copy them below to ensure file integrity, but main changes are in APPROVAL WORKFLOW
@@ -110,9 +113,8 @@ public class ProjectService {
     }
 
     public List<ProjectResponse> getPendingProjects() {
-        return projectRepository.findByApprovalStatus("PENDING").stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        // Delegate to approval service
+        return approvalService.getPending();
     }
 
     public ProjectResponse getProjectById(String id) {
@@ -130,9 +132,26 @@ public class ProjectService {
     // ========== UPDATE ==========
     
     @Transactional
-    public ProjectResponse updateProject(String id, UpdateProjectRequest request) {
+    public ProjectResponse updateProject(String id, UpdateProjectRequest request, String username) {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Project dengan ID " + id + " tidak ditemukan"));
+        
+        // Ownership/Permission check
+        // ADMIN or RESEARCH_COORD can edit any project
+        // Project leader can edit their own project
+        ResearchAssistant editor = memberRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User tidak ditemukan"));
+        
+        boolean isAdmin = memberRoleRepository.existsByMemberIdAndRole(editor.getId(), Role.ADMIN)
+                || "ADMIN".equalsIgnoreCase(editor.getRole());
+        boolean isResearchCoord = memberRoleRepository.existsByMemberIdAndRole(editor.getId(), Role.RESEARCH_COORD)
+                || "RESEARCH_COORD".equalsIgnoreCase(editor.getRole());
+        boolean isProjectLeader = project.getLeader() != null 
+                && project.getLeader().getUsername().equals(username);
+        
+        if (!isAdmin && !isResearchCoord && !isProjectLeader) {
+            throw new AccessDeniedException("Anda hanya dapat mengedit proyek yang Anda pimpin");
+        }
         
         if (request.getName() != null && !request.getName().isBlank()) project.setName(request.getName());
         if (request.getDescription() != null) project.setDescription(request.getDescription());
@@ -146,7 +165,11 @@ public class ProjectService {
             project.setProgressPercent(progress);
         }
         
+        // Only ADMIN can change leader
         if (request.getLeaderId() != null && !request.getLeaderId().isBlank()) {
+            if (!isAdmin && !isResearchCoord) {
+                throw new AccessDeniedException("Hanya Admin yang dapat mengubah ketua proyek");
+            }
             ResearchAssistant leader = memberRepository.findById(request.getLeaderId())
                     .orElseThrow(() -> new ResourceNotFoundException("Leader tidak ditemukan"));
             project.setLeader(leader);
@@ -164,7 +187,7 @@ public class ProjectService {
         
         eventPublisher.publishEvent(AuditEvent.update(
                 "PROJECT", saved.getId(), saved.getName(),
-                "Updated project: " + saved.getProjectCode()));
+                "Updated project: " + saved.getProjectCode() + " by " + username));
         
         return toResponse(saved);
     }
@@ -242,87 +265,16 @@ public class ProjectService {
                 .collect(Collectors.toList());
     }
 
-    // ========== APPROVAL WORKFLOW ==========
+    // ========== APPROVAL WORKFLOW (delegated to ProjectApprovalService) ==========
     
     @Transactional
     public ProjectResponse approveProject(String id, String approvedByUsername) {
-        Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Project tidak ditemukan"));
-        
-        if (!"PENDING".equals(project.getApprovalStatus())) {
-            throw new BusinessValidationException("Project sudah diproses sebelumnya (Status: " + project.getApprovalStatus() + ")");
-        }
-        
-        verifyApprovalPermission(project, approvedByUsername);
-        
-        project.setApprovalStatus("APPROVED");
-        project.setApprovedAt(java.time.LocalDate.now());
-        project.setApprovedBy(approvedByUsername);
-        
-        Project saved = projectRepository.save(project);
-        
-        eventPublisher.publishEvent(AuditEvent.update(
-                "PROJECT", saved.getId(), saved.getName(),
-                "Approved project: " + saved.getProjectCode()));
-        
-        return toResponse(saved);
+        return approvalService.approve(id, approvedByUsername);
     }
     
     @Transactional
     public ProjectResponse rejectProject(String id, String rejectionReason, String rejectedByUsername) {
-        Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Project tidak ditemukan"));
-        
-        if (!"PENDING".equals(project.getApprovalStatus())) {
-            throw new BusinessValidationException("Project sudah diproses sebelumnya (Status: " + project.getApprovalStatus() + ")");
-        }
-        
-        verifyApprovalPermission(project, rejectedByUsername);
-        
-        project.setApprovalStatus("REJECTED");
-        project.setRejectionReason(rejectionReason);
-        project.setApprovedBy(rejectedByUsername);
-        
-        Project saved = projectRepository.save(project);
-        
-        eventPublisher.publishEvent(AuditEvent.update(
-                "PROJECT", saved.getId(), saved.getName(),
-                "Rejected project: " + saved.getProjectCode() + " - Reason: " + rejectionReason));
-        
-        return toResponse(saved);
-    }
-    
-    private void verifyApprovalPermission(Project project, String username) {
-        ResearchAssistant approver = memberRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User approval tidak ditemukan"));
-        
-        // Check Legacy Role (AppUser.role) AND MemberRole (RBAC)
-        String userRole = approver.getRole().toUpperCase(); // from AppUser
-        
-        // ADMIN & RESEARCH_COORD can approve everything
-        if ("ADMIN".equals(userRole) || 
-            "RESEARCH_COORD".equals(userRole) ||
-            memberRoleRepository.existsByMemberIdAndRole(approver.getId(), Role.ADMIN) ||
-            memberRoleRepository.existsByMemberIdAndRole(approver.getId(), Role.RESEARCH_COORD)) {
-            return;
-        }
-        
-        // DIVISION_HEAD can only approve projects in their division
-        if (memberRoleRepository.existsByMemberIdAndRole(approver.getId(), Role.DIVISION_HEAD)) {
-            // Check division match
-            // Note: project.getDivision() should ideally match approver.getExpertDivision()
-            // We use case-insensitive check to be safe
-            String projectDiv = project.getDivision() != null ? project.getDivision().trim() : "";
-            String approverDiv = approver.getExpertDivision() != null ? approver.getExpertDivision().trim() : "";
-            
-            if (!projectDiv.equalsIgnoreCase(approverDiv)) {
-                throw new AccessDeniedException("Anda hanya dapat menyetujui proyek di divisi Anda (" + approverDiv + ")");
-            }
-            return;
-        }
-        
-        // If not one of the above roles
-        throw new AccessDeniedException("Anda tidak memiliki akses untuk menyetujui proyek ini");
+        return approvalService.reject(id, rejectionReason, rejectedByUsername);
     }
 
     // ========== HELPER: Convert to Response DTO ==========

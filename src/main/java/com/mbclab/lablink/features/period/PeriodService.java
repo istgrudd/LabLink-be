@@ -8,6 +8,8 @@ import com.mbclab.lablink.features.member.ResearchAssistant;
 import com.mbclab.lablink.features.period.dto.*;
 import com.mbclab.lablink.features.project.ProjectRepository;
 import com.mbclab.lablink.features.event.EventRepository;
+import com.mbclab.lablink.shared.exception.BusinessValidationException;
+import com.mbclab.lablink.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -43,7 +45,7 @@ public class PeriodService {
     @CacheEvict(value = {ACTIVE_PERIOD_CACHE, ALL_PERIODS_CACHE}, allEntries = true)
     public PeriodResponse createPeriod(CreatePeriodRequest request) {
         if (periodRepository.findByCode(request.getCode()).isPresent()) {
-            throw new RuntimeException("Periode dengan kode " + request.getCode() + " sudah ada");
+            throw new BusinessValidationException("Periode dengan kode " + request.getCode() + " sudah ada");
         }
         
         AcademicPeriod period = new AcademicPeriod();
@@ -75,13 +77,13 @@ public class PeriodService {
     @Cacheable(value = ACTIVE_PERIOD_CACHE)
     public PeriodResponse getActivePeriod() {
         AcademicPeriod period = periodRepository.findByIsActiveTrue()
-                .orElseThrow(() -> new RuntimeException("Tidak ada periode aktif"));
+                .orElseThrow(() -> new ResourceNotFoundException("Tidak ada periode aktif"));
         return toResponse(period);
     }
 
     public PeriodResponse getPeriodById(String id) {
         AcademicPeriod period = periodRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Periode tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Periode tidak ditemukan"));
         return toResponse(period);
     }
 
@@ -96,10 +98,10 @@ public class PeriodService {
         });
         
         AcademicPeriod period = periodRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Periode tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Periode tidak ditemukan"));
         
         if (period.isArchived()) {
-            throw new RuntimeException("Tidak bisa mengaktifkan periode yang sudah diarsipkan");
+            throw new BusinessValidationException("Tidak bisa mengaktifkan periode yang sudah diarsipkan");
         }
         
         period.setActive(true);
@@ -117,7 +119,7 @@ public class PeriodService {
     @Transactional
     public PeriodResponse updatePeriod(String id, UpdatePeriodRequest request) {
         AcademicPeriod period = periodRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Periode tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Periode tidak ditemukan"));
 
         if (request.getName() != null && !request.getName().isBlank()) {
             period.setName(request.getName());
@@ -143,7 +145,7 @@ public class PeriodService {
     @Transactional
     public PeriodResponse archivePeriod(String id) {
         AcademicPeriod period = periodRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Periode tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Periode tidak ditemukan"));
         
         if (period.isActive()) {
             // Auto deactivate if archiving
@@ -165,14 +167,14 @@ public class PeriodService {
     @Transactional
     public PeriodResponse closePeriod(String id, ClosePeriodRequest request) {
         AcademicPeriod oldPeriod = periodRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Periode tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Periode tidak ditemukan"));
         
         if (!oldPeriod.isActive()) {
-            throw new RuntimeException("Hanya periode aktif yang bisa ditutup");
+            throw new BusinessValidationException("Hanya periode aktif yang bisa ditutup");
         }
         
         AcademicPeriod newPeriod = periodRepository.findById(request.getNewPeriodId())
-                .orElseThrow(() -> new RuntimeException("Periode baru tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Periode baru tidak ditemukan"));
         
         // 1. Get all members in old period
         List<MemberPeriod> oldMembers = memberPeriodRepository.findByPeriodIdAndStatus(id, "ACTIVE");
@@ -212,10 +214,10 @@ public class PeriodService {
     @Transactional
     public void deletePeriod(String id) {
         AcademicPeriod period = periodRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Periode tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Periode tidak ditemukan"));
         
         if (period.isActive()) {
-            throw new RuntimeException("Tidak bisa menghapus periode yang sedang aktif. Tetapkan periode lain sebagai aktif terlebih dahulu.");
+            throw new BusinessValidationException("Tidak bisa menghapus periode yang sedang aktif. Tetapkan periode lain sebagai aktif terlebih dahulu.");
         }
         
         // 0. Delete Financial Data (Cascade)
@@ -254,19 +256,19 @@ public class PeriodService {
     @Transactional
     public MemberPeriodResponse addMemberToPeriod(String periodId, AddMemberToPeriodRequest request) {
         AcademicPeriod period = periodRepository.findById(periodId)
-                .orElseThrow(() -> new RuntimeException("Periode tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Periode tidak ditemukan"));
         
         if (period.isArchived()) {
-            throw new RuntimeException("Tidak bisa menambah member ke periode yang sudah diarsipkan");
+            throw new BusinessValidationException("Tidak bisa menambah member ke periode yang sudah diarsipkan");
         }
         
         ResearchAssistant member = memberRepository.findById(request.getMemberId())
-                .orElseThrow(() -> new RuntimeException("Member tidak ditemukan"));
+                .orElseThrow(() -> new ResourceNotFoundException("Member tidak ditemukan"));
         
         // Check if already in period
         MemberPeriodId mpId = new MemberPeriodId(request.getMemberId(), periodId);
         if (memberPeriodRepository.existsById(mpId)) {
-            throw new RuntimeException("Member sudah terdaftar di periode ini");
+            throw new BusinessValidationException("Member sudah terdaftar di periode ini");
         }
         
         MemberPeriod mp = new MemberPeriod(member, period, request.getPosition());

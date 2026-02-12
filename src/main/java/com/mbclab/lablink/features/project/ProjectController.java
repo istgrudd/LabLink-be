@@ -5,6 +5,7 @@ import com.mbclab.lablink.features.project.dto.CreateProjectRequest;
 import com.mbclab.lablink.features.project.dto.ProjectResponse;
 import com.mbclab.lablink.features.project.dto.RejectProjectRequest;
 import com.mbclab.lablink.features.project.dto.UpdateProjectRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -25,7 +26,7 @@ public class ProjectController {
     
     @PostMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ProjectResponse> createProject(@RequestBody CreateProjectRequest request) {
+    public ResponseEntity<ProjectResponse> createProject(@Valid @RequestBody CreateProjectRequest request) {
         ProjectResponse created = projectService.createProject(request);
         return ResponseEntity.ok(created);
     }
@@ -67,11 +68,13 @@ public class ProjectController {
     // ========== UPDATE ==========
     
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ProjectResponse> updateProject(
             @PathVariable String id,
-            @RequestBody UpdateProjectRequest request) {
-        ProjectResponse updated = projectService.updateProject(id, request);
+            @Valid @RequestBody UpdateProjectRequest request,
+            Authentication authentication) {
+        String username = authentication.getName();
+        ProjectResponse updated = projectService.updateProject(id, request, username);
         return ResponseEntity.ok(updated);
     }
 

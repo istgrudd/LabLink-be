@@ -1,13 +1,13 @@
 package com.mbclab.lablink.features.event;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.mbclab.lablink.shared.approval.ApprovalRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface EventRepository extends JpaRepository<Event, String> {
+public interface EventRepository extends ApprovalRepository<Event, String> {
     Optional<Event> findByEventCode(String eventCode);
     List<Event> findByPeriodId(String periodId);
     long countByEventCodeStartingWith(String prefix);
@@ -19,4 +19,7 @@ public interface EventRepository extends JpaRepository<Event, String> {
 
     // For orphan filter
     List<Event> findByPeriodIsNull();
+    
+    // For approval workflow
+    List<Event> findByApprovalStatus(String approvalStatus);
 }
