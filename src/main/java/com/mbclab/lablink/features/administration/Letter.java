@@ -4,6 +4,7 @@ import com.mbclab.lablink.features.event.Event;
 import com.mbclab.lablink.features.member.ResearchAssistant;
 import com.mbclab.lablink.features.period.AcademicPeriod;
 import com.mbclab.lablink.shared.BaseEntity;
+import com.mbclab.lablink.shared.status.LetterStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -66,7 +67,9 @@ public class Letter extends BaseEntity {
     private LocalDate issueDate;
     
     // ==== STATUS: PENDING → REVIEWED → APPROVED → SIGNED ====
-    private String status = "PENDING";
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private LetterStatus status = LetterStatus.PENDING;
 
     // Periode kepengurusan
     @ManyToOne(fetch = FetchType.LAZY)

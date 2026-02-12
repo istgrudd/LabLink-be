@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 public class FinanceDataInitializer implements CommandLineRunner {
 
     private final FinanceCategoryRepository categoryRepository;
-    private final FinanceService financeService;
+    private final FinanceCategoryService categoryService;
 
     @Override
     public void run(String... args) throws Exception {
@@ -43,6 +43,6 @@ public class FinanceDataInitializer implements CommandLineRunner {
         request.setName(name);
         request.setType(type);
         request.setDescription(description);
-        financeService.createCategory(request);
+        categoryService.createCategory(request);
     }
 }

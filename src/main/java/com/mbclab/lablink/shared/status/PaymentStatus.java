@@ -1,28 +1,25 @@
 package com.mbclab.lablink.shared.status;
 
 /**
- * Status constants for Payment/Dues entities.
+ * Status pembayaran iuran.
+ * Flow: UNPAID → PENDING → VERIFIED
+ *                        → REJECTED → PENDING (re-upload)
  */
-public final class PaymentStatus {
-    
-    public static final String UNPAID = "UNPAID";
-    public static final String PENDING = "PENDING";      // Submitted, waiting verification
-    public static final String VERIFIED = "VERIFIED";
-    public static final String REJECTED = "REJECTED";
-    
-    private PaymentStatus() {
-        // Prevent instantiation
+public enum PaymentStatus {
+    UNPAID,
+    PENDING,
+    VERIFIED,
+    REJECTED;
+
+    public boolean isPending() {
+        return this == PENDING;
     }
-    
-    public static boolean isPending(String status) {
-        return PENDING.equals(status);
+
+    public boolean isVerified() {
+        return this == VERIFIED;
     }
-    
-    public static boolean isVerified(String status) {
-        return VERIFIED.equals(status);
-    }
-    
-    public static boolean isRejected(String status) {
-        return REJECTED.equals(status);
+
+    public boolean isRejected() {
+        return this == REJECTED;
     }
 }

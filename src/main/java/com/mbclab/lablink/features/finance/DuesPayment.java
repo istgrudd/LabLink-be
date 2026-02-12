@@ -3,6 +3,7 @@ package com.mbclab.lablink.features.finance;
 import com.mbclab.lablink.features.member.ResearchAssistant;
 import com.mbclab.lablink.features.period.AcademicPeriod;
 import com.mbclab.lablink.shared.BaseEntity;
+import com.mbclab.lablink.shared.status.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -51,8 +52,9 @@ public class DuesPayment extends BaseEntity {
      * PENDING = Sudah submit bukti, menunggu verifikasi
      * VERIFIED = Sudah diverifikasi admin
      */
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String status = "UNPAID";
+    private PaymentStatus status = PaymentStatus.UNPAID;
 
     private String verifiedBy;  // Admin username yang verifikasi
 }

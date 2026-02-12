@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mbclab.lablink.features.auth.AppUser;
 import com.mbclab.lablink.features.auth.AuthService;
 import com.mbclab.lablink.features.finance.dto.*;
-import com.mbclab.lablink.shared.FileStorageService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
@@ -20,43 +20,45 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FinanceController {
 
-    private final FinanceService financeService;
+    private final FinanceCategoryService categoryService;
+    private final DuesPaymentService duesPaymentService;
+    private final FinanceTransactionService transactionService;
+    private final ProcurementService procurementService;
     private final AuthService authService;
-    private final FileStorageService fileStorageService;
     private final ObjectMapper objectMapper;
 
     // ==================== CATEGORY ====================
 
     @PostMapping("/categories")
     @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
-    public ResponseEntity<CategoryResponse> createCategory(@RequestBody CategoryRequest request) {
-        return ResponseEntity.ok(financeService.createCategory(request));
+    public ResponseEntity<CategoryResponse> createCategory(@Valid @RequestBody CategoryRequest request) {
+        return ResponseEntity.ok(categoryService.createCategory(request));
     }
 
     @GetMapping("/categories")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<CategoryResponse>> getAllCategories() {
-        return ResponseEntity.ok(financeService.getAllCategories());
+        return ResponseEntity.ok(categoryService.getAllCategories());
     }
 
     @GetMapping("/categories/by-type/{type}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<CategoryResponse>> getCategoriesByType(@PathVariable String type) {
-        return ResponseEntity.ok(financeService.getCategoriesByType(type));
+        return ResponseEntity.ok(categoryService.getCategoriesByType(type));
     }
 
     @PutMapping("/categories/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ResponseEntity<CategoryResponse> updateCategory(
             @PathVariable String id, 
-            @RequestBody CategoryRequest request) {
-        return ResponseEntity.ok(financeService.updateCategory(id, request));
+            @Valid @RequestBody CategoryRequest request) {
+        return ResponseEntity.ok(categoryService.updateCategory(id, request));
     }
 
     @DeleteMapping("/categories/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ResponseEntity<Void> deleteCategory(@PathVariable String id) {
-        financeService.deleteCategory(id);
+        categoryService.deleteCategory(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -67,16 +69,10 @@ public class FinanceController {
     public ResponseEntity<DuesPaymentResponse> submitDuesPayment(
             @RequestHeader("Authorization") String authHeader,
             @RequestParam("data") String duesDataJson,
-            @RequestParam("file") MultipartFile file) {
-        try {
-            AppUser user = getUserFromToken(authHeader);
-            DuesPaymentRequest request = objectMapper.readValue(duesDataJson, DuesPaymentRequest.class);
-            String proofPath = fileStorageService.storeFile(file);
-            
-            return ResponseEntity.ok(financeService.submitDuesPayment(user.getId(), request, proofPath));
-        } catch (Exception e) {
-            throw new RuntimeException("Gagal submit pembayaran: " + e.getMessage());
-        }
+            @RequestParam("file") MultipartFile file) throws Exception {
+        AppUser user = getUserFromToken(authHeader);
+        DuesPaymentRequest request = objectMapper.readValue(duesDataJson, DuesPaymentRequest.class);
+        return ResponseEntity.ok(duesPaymentService.submitDuesPayment(user.getId(), request, file));
     }
 
     @GetMapping("/dues/my-history")
@@ -84,19 +80,21 @@ public class FinanceController {
     public ResponseEntity<List<DuesPaymentResponse>> getMyDuesHistory(
             @RequestHeader("Authorization") String authHeader) {
         AppUser user = getUserFromToken(authHeader);
-        return ResponseEntity.ok(financeService.getMyDuesHistory(user.getId()));
+        return ResponseEntity.ok(duesPaymentService.getMyDuesHistory(user.getId()));
     }
 
     @GetMapping("/dues")
     @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
-    public ResponseEntity<List<DuesPaymentResponse>> getAllDues() {
-        return ResponseEntity.ok(financeService.getAllDues());
+    public ResponseEntity<Page<DuesPaymentResponse>> getAllDues(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(duesPaymentService.getAllDues(page, size));
     }
 
     @GetMapping("/dues/pending")
     @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ResponseEntity<List<DuesPaymentResponse>> getPendingVerification() {
-        return ResponseEntity.ok(financeService.getPendingVerification());
+        return ResponseEntity.ok(duesPaymentService.getPendingVerification());
     }
 
     @PutMapping("/dues/{id}/verify")
@@ -105,7 +103,7 @@ public class FinanceController {
             @PathVariable String id,
             @RequestHeader("Authorization") String authHeader) {
         AppUser admin = getUserFromToken(authHeader);
-        return ResponseEntity.ok(financeService.verifyDuesPayment(id, admin.getUsername()));
+        return ResponseEntity.ok(duesPaymentService.verifyDuesPayment(id, admin.getUsername()));
     }
 
     @PostMapping("/dues/{id}/reject")
@@ -114,7 +112,7 @@ public class FinanceController {
             @PathVariable String id,
             @RequestHeader("Authorization") String authHeader) {
         AppUser admin = getUserFromToken(authHeader);
-        return ResponseEntity.ok(financeService.rejectDuesPayment(id, admin.getUsername()));
+        return ResponseEntity.ok(duesPaymentService.rejectDuesPayment(id, admin.getUsername()));
     }
 
     // ==================== TRANSACTIONS ====================
@@ -124,25 +122,19 @@ public class FinanceController {
     public ResponseEntity<TransactionResponse> createTransactionWithReceipt(
             @RequestHeader("Authorization") String authHeader,
             @RequestParam("data") String transactionDataJson,
-            @RequestParam(value = "file", required = false) MultipartFile file) {
-        try {
-            AppUser admin = getUserFromToken(authHeader);
-            TransactionRequest request = objectMapper.readValue(transactionDataJson, TransactionRequest.class);
-            String receiptPath = file != null ? fileStorageService.storeFile(file) : null;
-            
-            return ResponseEntity.ok(financeService.createTransaction(request, receiptPath, admin.getUsername()));
-        } catch (Exception e) {
-            throw new RuntimeException("Gagal membuat transaksi: " + e.getMessage());
-        }
+            @RequestParam(value = "file", required = false) MultipartFile file) throws Exception {
+        AppUser admin = getUserFromToken(authHeader);
+        TransactionRequest request = objectMapper.readValue(transactionDataJson, TransactionRequest.class);
+        return ResponseEntity.ok(transactionService.createTransaction(request, file, admin.getUsername()));
     }
 
     @PostMapping("/transactions/simple")
     @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ResponseEntity<TransactionResponse> createTransactionSimple(
             @RequestHeader("Authorization") String authHeader,
-            @RequestBody TransactionRequest request) {
+            @Valid @RequestBody TransactionRequest request) {
         AppUser admin = getUserFromToken(authHeader);
-        return ResponseEntity.ok(financeService.createTransaction(request, null, admin.getUsername()));
+        return ResponseEntity.ok(transactionService.createTransaction(request, admin.getUsername()));
     }
 
     @GetMapping("/transactions")
@@ -150,27 +142,27 @@ public class FinanceController {
     public ResponseEntity<Page<TransactionResponse>> getAllTransactions(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(financeService.getAllTransactions(page, size));
+        return ResponseEntity.ok(transactionService.getAllTransactions(page, size));
     }
 
     @GetMapping("/transactions/summary")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<TransactionSummaryResponse> getTransactionSummary() {
-        return ResponseEntity.ok(financeService.getTransactionSummary());
+        return ResponseEntity.ok(transactionService.getTransactionSummary());
     }
 
     @PutMapping("/transactions/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ResponseEntity<TransactionResponse> updateTransaction(
             @PathVariable String id,
-            @RequestBody TransactionRequest request) {
-        return ResponseEntity.ok(financeService.updateTransaction(id, request));
+            @Valid @RequestBody TransactionRequest request) {
+        return ResponseEntity.ok(transactionService.updateTransaction(id, request));
     }
 
     @DeleteMapping("/transactions/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ResponseEntity<Void> deleteTransaction(@PathVariable String id) {
-        financeService.deleteTransaction(id);
+        transactionService.deleteTransaction(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -180,9 +172,9 @@ public class FinanceController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ProcurementResponse> createProcurementRequest(
             @RequestHeader("Authorization") String authHeader,
-            @RequestBody ProcurementRequestDto request) {
+            @Valid @RequestBody ProcurementRequestDto request) {
         AppUser user = getUserFromToken(authHeader);
-        return ResponseEntity.ok(financeService.createProcurementRequest(user.getId(), request));
+        return ResponseEntity.ok(procurementService.createProcurementRequest(user.getId(), request));
     }
 
     @GetMapping("/procurement/my-requests")
@@ -190,7 +182,7 @@ public class FinanceController {
     public ResponseEntity<List<ProcurementResponse>> getMyProcurementRequests(
             @RequestHeader("Authorization") String authHeader) {
         AppUser user = getUserFromToken(authHeader);
-        return ResponseEntity.ok(financeService.getMyProcurementRequests(user.getId()));
+        return ResponseEntity.ok(procurementService.getMyProcurementRequests(user.getId()));
     }
 
     @GetMapping("/procurement")
@@ -198,13 +190,13 @@ public class FinanceController {
     public ResponseEntity<Page<ProcurementResponse>> getAllProcurementRequests(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(financeService.getAllProcurementRequests(page, size));
+        return ResponseEntity.ok(procurementService.getAllProcurementRequests(page, size));
     }
 
     @GetMapping("/procurement/pending")
     @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ResponseEntity<List<ProcurementResponse>> getPendingProcurements() {
-        return ResponseEntity.ok(financeService.getPendingProcurements());
+        return ResponseEntity.ok(procurementService.getPendingProcurements());
     }
 
     @PutMapping("/procurement/{id}/approve")
@@ -213,7 +205,7 @@ public class FinanceController {
             @PathVariable String id,
             @RequestHeader("Authorization") String authHeader) {
         AppUser admin = getUserFromToken(authHeader);
-        return ResponseEntity.ok(financeService.approveProcurement(id, admin.getUsername()));
+        return ResponseEntity.ok(procurementService.approveProcurement(id, admin.getUsername()));
     }
 
     @PutMapping("/procurement/{id}/reject")
@@ -221,9 +213,9 @@ public class FinanceController {
     public ResponseEntity<ProcurementResponse> rejectProcurement(
             @PathVariable String id,
             @RequestHeader("Authorization") String authHeader,
-            @RequestBody RejectProcurementRequest request) {
+            @Valid @RequestBody RejectProcurementRequest request) {
         AppUser admin = getUserFromToken(authHeader);
-        return ResponseEntity.ok(financeService.rejectProcurement(id, admin.getUsername(), request.getRejectionReason()));
+        return ResponseEntity.ok(procurementService.rejectProcurement(id, admin.getUsername(), request.getRejectionReason()));
     }
 
     @PutMapping("/procurement/{id}/mark-purchased")
@@ -231,7 +223,7 @@ public class FinanceController {
     public ResponseEntity<ProcurementResponse> markPurchased(
             @PathVariable String id,
             @RequestParam(required = false) String transactionId) {
-        return ResponseEntity.ok(financeService.markPurchased(id, transactionId));
+        return ResponseEntity.ok(procurementService.markPurchased(id, transactionId));
     }
 
     // ==================== HELPER ====================

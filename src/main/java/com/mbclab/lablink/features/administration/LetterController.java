@@ -1,18 +1,16 @@
 package com.mbclab.lablink.features.administration;
 
 import com.mbclab.lablink.features.administration.dto.*;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
-import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/administration/letters")
@@ -20,26 +18,26 @@ import java.util.Map;
 public class LetterController {
 
     private final LetterService letterService;
-    private final LetterDocumentGenerator letterDocumentGenerator;
 
     // ==================== SURAT KELUAR ====================
     
     // All authenticated users can request a letter
     @PostMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<LetterResponse> createLetter(@RequestBody CreateLetterRequest request) {
-        LetterResponse created = letterService.createLetter(request);
-        return ResponseEntity.ok(created);
+    public ResponseEntity<LetterResponse> createLetter(@Valid @RequestBody CreateLetterRequest request) {
+        return ResponseEntity.ok(letterService.createLetter(request));
     }
 
     @GetMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<LetterResponse>> getAllLetters(
-            @RequestParam(required = false) String periodId) {
+    public ResponseEntity<Page<LetterResponse>> getAllLetters(
+            @RequestParam(required = false) String periodId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
         if (periodId != null && !periodId.isBlank()) {
-            return ResponseEntity.ok(letterService.getLettersByPeriod(periodId));
+            return ResponseEntity.ok(letterService.getLettersByPeriod(periodId, page, size));
         }
-        return ResponseEntity.ok(letterService.getAllLetters());
+        return ResponseEntity.ok(letterService.getAllLetters(page, size));
     }
 
     @GetMapping("/{id}")
@@ -92,60 +90,14 @@ public class LetterController {
         return ResponseEntity.noContent().build();
     }
 
-    // Download approved letter (must be APPROVED status)
+    // Download approved/signed letter — controller only handles HTTP response
     @PostMapping("/{id}/download")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<byte[]> downloadLetter(
             @PathVariable String id,
-            @RequestParam(defaultValue = "Surat Peminjaman Videotron MBC") String templateName) throws IOException {
-        
-        LetterResponse letter = letterService.getLetterById(id);
-        
-        // Only approved or signed letters can be downloaded
-        if (!"APPROVED".equals(letter.getStatus()) && !"SIGNED".equals(letter.getStatus())) {
-            throw new RuntimeException("Hanya surat yang sudah disetujui/ditandatangani yang bisa didownload");
-        }
-        
-        // Prepare data for template from letter entity (no manual input needed)
-        Map<String, String> data = new HashMap<>();
-        data.put("perihal", letter.getSubject());
-        data.put("tujuan", letter.getRecipient());
-        data.put("isi_surat", letter.getContent() != null ? letter.getContent() : "");
-        data.put("lampiran", letter.getAttachment() != null ? letter.getAttachment() : "-");
-        
-        // Requester info (auto-filled from user when created)
-        data.put("nama_pemohon", letter.getRequesterName() != null ? letter.getRequesterName() : "");
-        data.put("nim_pemohon", letter.getRequesterNim() != null ? letter.getRequesterNim() : "");
-        
-        // Event / activity name
-        if (letter.getEvent() != null) {
-            data.put("nama_kegiatan", letter.getEvent().getName());
-        } else {
-            data.put("nama_kegiatan", "");
-        }
-        
-        // Borrow date/return date (now using LocalDate, not LocalTime)
-        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("d MMMM yyyy", new java.util.Locale("id", "ID"));
-        if (letter.getBorrowDate() != null) {
-            data.put("waktu_mulai", letter.getBorrowDate().format(dateFormatter));
-        } else {
-            data.put("waktu_mulai", "");
-        }
-        if (letter.getBorrowReturnDate() != null) {
-            data.put("waktu_selesai", letter.getBorrowReturnDate().format(dateFormatter));
-        } else {
-            data.put("waktu_selesai", "");
-        }
-        
-        // Generate document
-        byte[] document = letterDocumentGenerator.generateDocument(
-                templateName, 
-                letter.getLetterType(), 
-                letter.getCategory(), 
-                data);
-        
-        // Filename
-        String filename = "Surat_" + letter.getLetterNumber().replace("/", "-") + ".docx";
+            @RequestParam(defaultValue = "Surat Peminjaman Videotron MBC") String templateName) {
+        byte[] document = letterService.generateDocument(id, templateName);
+        String filename = letterService.getLetterFilename(id);
         
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
@@ -161,9 +113,8 @@ public class LetterController {
     @PostMapping("/incoming")
     @PreAuthorize("hasAnyRole('ADMIN', 'SEKRETARIS')")
     public ResponseEntity<IncomingLetterResponse> createIncomingLetter(
-            @RequestBody CreateIncomingLetterRequest request) {
-        IncomingLetterResponse created = letterService.createIncomingLetter(request);
-        return ResponseEntity.ok(created);
+            @Valid @RequestBody CreateIncomingLetterRequest request) {
+        return ResponseEntity.ok(letterService.createIncomingLetter(request));
     }
 
     @GetMapping("/incoming")

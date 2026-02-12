@@ -9,15 +9,26 @@ import com.mbclab.lablink.features.period.AcademicPeriodRepository;
 import com.mbclab.lablink.features.administration.dto.*;
 import com.mbclab.lablink.shared.exception.BusinessValidationException;
 import com.mbclab.lablink.shared.exception.ResourceNotFoundException;
+import com.mbclab.lablink.shared.exception.FileStorageException;
+import com.mbclab.lablink.shared.status.LetterStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +42,7 @@ public class LetterService {
     private final LetterNumberGenerator letterNumberGenerator;
     private final AcademicPeriodRepository periodRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final LetterDocumentGenerator letterDocumentGenerator;
 
     // ==================== SURAT KELUAR ====================
     
@@ -61,7 +73,7 @@ public class LetterService {
         letter.setBorrowReturnDate(request.getBorrowReturnDate());
         
         // Status = PENDING (waiting for approval)
-        letter.setStatus("PENDING");
+        letter.setStatus(LetterStatus.PENDING);
         
         // Link to event if provided
         if (request.getEventId() != null && !request.getEventId().isBlank()) {
@@ -88,11 +100,11 @@ public class LetterService {
         Letter letter = letterRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Surat tidak ditemukan"));
         
-        if (!"PENDING".equals(letter.getStatus())) {
+        if (letter.getStatus() != LetterStatus.PENDING) {
             throw new BusinessValidationException("Hanya surat dengan status PENDING yang bisa di-review");
         }
         
-        letter.setStatus("REVIEWED");
+        letter.setStatus(LetterStatus.REVIEWED);
         String reviewer = SecurityContextHolder.getContext().getAuthentication().getName();
         letter.setReviewedBy(reviewer);
         
@@ -110,7 +122,7 @@ public class LetterService {
         Letter letter = letterRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Surat tidak ditemukan"));
         
-        if (!"REVIEWED".equals(letter.getStatus())) {
+        if (letter.getStatus() != LetterStatus.REVIEWED) {
             throw new BusinessValidationException("Hanya surat dengan status REVIEWED yang bisa disetujui. " +
                     "Surat harus di-review terlebih dahulu oleh Sekretaris.");
         }
@@ -127,7 +139,7 @@ public class LetterService {
         letter.setLetterNumber(letterNumber);
         
         // Set approved
-        letter.setStatus("APPROVED");
+        letter.setStatus(LetterStatus.APPROVED);
         String approver = SecurityContextHolder.getContext().getAuthentication().getName();
         letter.setApprovedBy(approver);
         
@@ -146,12 +158,12 @@ public class LetterService {
         Letter letter = letterRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Surat tidak ditemukan"));
         
-        if (!"APPROVED".equals(letter.getStatus())) {
+        if (letter.getStatus() != LetterStatus.APPROVED) {
             throw new BusinessValidationException("Hanya surat dengan status APPROVED yang bisa ditandatangani. " +
                     "Surat harus di-approve terlebih dahulu.");
         }
         
-        letter.setStatus("SIGNED");
+        letter.setStatus(LetterStatus.SIGNED);
         String signer = SecurityContextHolder.getContext().getAuthentication().getName();
         letter.setSignedBy(signer);
         
@@ -170,12 +182,12 @@ public class LetterService {
                 .orElseThrow(() -> new ResourceNotFoundException("Surat tidak ditemukan"));
         
         // Allow reject from PENDING or REVIEWED
-        if (!"PENDING".equals(letter.getStatus()) && !"REVIEWED".equals(letter.getStatus())) {
+        if (letter.getStatus() != LetterStatus.PENDING && letter.getStatus() != LetterStatus.REVIEWED) {
             throw new BusinessValidationException(
                     "Hanya surat dengan status PENDING atau REVIEWED yang bisa ditolak");
         }
         
-        letter.setStatus("REJECTED");
+        letter.setStatus(LetterStatus.REJECTED);
         letter.setRejectionReason(reason);
         String approver = SecurityContextHolder.getContext().getAuthentication().getName();
         letter.setApprovedBy(approver);
@@ -190,16 +202,16 @@ public class LetterService {
         return toResponse(saved);
     }
 
-    public List<LetterResponse> getAllLetters() {
-        return letterRepository.findAll().stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+    public Page<LetterResponse> getAllLetters(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return letterRepository.findAll(pageable)
+                .map(this::toResponse);
     }
 
-    public List<LetterResponse> getLettersByPeriod(String periodId) {
-        return letterRepository.findByPeriodId(periodId).stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+    public Page<LetterResponse> getLettersByPeriod(String periodId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return letterRepository.findByPeriodId(periodId, pageable)
+                .map(this::toResponse);
     }
 
     public LetterResponse getLetterById(String id) {
@@ -227,6 +239,63 @@ public class LetterService {
         eventPublisher.publishEvent(AuditEvent.delete(
                 "LETTER", id, subject,
                 "Deleted letter: " + (number != null ? number : "pending")));
+    }
+
+    // ==================== DOCUMENT GENERATION ====================
+
+    /**
+     * Generate document from letter data.
+     * All business logic (status check, template data mapping) is in the service layer.
+     */
+    public byte[] generateDocument(String id, String templateName) {
+        Letter letter = letterRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Surat tidak ditemukan"));
+        
+        // Status validation — only approved or signed letters can be downloaded
+        if (letter.getStatus() != LetterStatus.APPROVED && letter.getStatus() != LetterStatus.SIGNED) {
+            throw new BusinessValidationException(
+                    "Hanya surat yang sudah disetujui/ditandatangani yang bisa didownload");
+        }
+        
+        // Build template data from entity (SoC — not in controller)
+        Map<String, String> data = new HashMap<>();
+        data.put("perihal", letter.getSubject());
+        data.put("tujuan", letter.getRecipient());
+        data.put("isi_surat", letter.getContent() != null ? letter.getContent() : "");
+        data.put("lampiran", letter.getAttachment() != null ? letter.getAttachment() : "-");
+        
+        // Requester info
+        data.put("nama_pemohon", letter.getRequesterName() != null ? letter.getRequesterName() : "");
+        data.put("nim_pemohon", letter.getRequesterNim() != null ? letter.getRequesterNim() : "");
+        
+        // Event / activity name
+        data.put("nama_kegiatan", letter.getEvent() != null ? letter.getEvent().getName() : "");
+        
+        // Borrow dates
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern(
+                "d MMMM yyyy", new java.util.Locale("id", "ID"));
+        data.put("waktu_mulai", letter.getBorrowDate() != null 
+                ? letter.getBorrowDate().format(dateFormatter) : "");
+        data.put("waktu_selesai", letter.getBorrowReturnDate() != null 
+                ? letter.getBorrowReturnDate().format(dateFormatter) : "");
+        
+        try {
+            return letterDocumentGenerator.generateDocument(
+                    templateName, letter.getLetterType(), letter.getCategory(), data);
+        } catch (IOException e) {
+            throw new FileStorageException("Gagal generate dokumen surat: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Get the letter number formatted as filename.
+     */
+    public String getLetterFilename(String id) {
+        Letter letter = letterRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Surat tidak ditemukan"));
+        return "Surat_" + (letter.getLetterNumber() != null 
+                ? letter.getLetterNumber().replace("/", "-") 
+                : letter.getId()) + ".docx";
     }
 
     // ==================== SURAT MASUK ====================
@@ -293,7 +362,7 @@ public class LetterService {
                     .borrowDate(letter.getBorrowDate())
                     .borrowReturnDate(letter.getBorrowReturnDate())
                     .issueDate(letter.getIssueDate())
-                    .status(letter.getStatus())
+                    .status(letter.getStatus().name())
                     .createdBy(letter.getRequesterName())
                     .reviewedBy(letter.getReviewedBy())
                     .approvedBy(letter.getApprovedBy())

@@ -1,40 +1,39 @@
 package com.mbclab.lablink.shared.status;
 
 /**
- * Status constants for Letter entities.
+ * Status surat keluar.
  * Flow: PENDING → REVIEWED → APPROVED → SIGNED
- * Rejection allowed from: PENDING or REVIEWED
+ *                           → REJECTED
  */
-public final class LetterStatus {
-    
-    public static final String PENDING = "PENDING";
-    public static final String REVIEWED = "REVIEWED";
-    public static final String APPROVED = "APPROVED";
-    public static final String SIGNED = "SIGNED";
-    public static final String REJECTED = "REJECTED";
-    public static final String DOWNLOADED = "DOWNLOADED";
-    
-    private LetterStatus() {
-        // Prevent instantiation
+public enum LetterStatus {
+    PENDING,
+    REVIEWED,
+    APPROVED,
+    SIGNED,
+    REJECTED,
+    DOWNLOADED;
+
+    public boolean isPending() {
+        return this == PENDING;
     }
-    
-    public static boolean isPending(String status) {
-        return PENDING.equals(status);
+
+    public boolean isReviewed() {
+        return this == REVIEWED;
     }
-    
-    public static boolean isReviewed(String status) {
-        return REVIEWED.equals(status);
+
+    public boolean isApproved() {
+        return this == APPROVED;
     }
-    
-    public static boolean isApproved(String status) {
-        return APPROVED.equals(status);
+
+    public boolean isSigned() {
+        return this == SIGNED;
     }
-    
-    public static boolean isSigned(String status) {
-        return SIGNED.equals(status);
+
+    public boolean isRejected() {
+        return this == REJECTED;
     }
-    
-    public static boolean canDownload(String status) {
-        return APPROVED.equals(status) || SIGNED.equals(status) || DOWNLOADED.equals(status);
+
+    public boolean canDownload() {
+        return this == APPROVED || this == SIGNED || this == DOWNLOADED;
     }
 }
