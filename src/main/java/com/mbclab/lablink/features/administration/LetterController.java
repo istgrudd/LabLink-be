@@ -55,14 +55,28 @@ public class LetterController {
         return ResponseEntity.ok(letterService.getLetterByNumber(normalizedNumber));
     }
 
-    // Admin approves letter request
+    // Sekretaris reviews letter request (PENDING → REVIEWED)
+    @PatchMapping("/{id}/review")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SEKRETARIS')")
+    public ResponseEntity<LetterResponse> reviewLetter(@PathVariable String id) {
+        return ResponseEntity.ok(letterService.reviewLetter(id));
+    }
+
+    // Ketua/Dosen approves letter request (REVIEWED → APPROVED)
     @PatchMapping("/{id}/approve")
     @PreAuthorize("hasAnyRole('ADMIN', 'SEKRETARIS')")
     public ResponseEntity<LetterResponse> approveLetter(@PathVariable String id) {
         return ResponseEntity.ok(letterService.approveLetter(id));
     }
 
-    // Admin rejects letter request
+    // Sign the letter (APPROVED → SIGNED)
+    @PatchMapping("/{id}/sign")
+    @PreAuthorize("hasAnyRole('ADMIN', 'HEAD_LAB')")
+    public ResponseEntity<LetterResponse> signLetter(@PathVariable String id) {
+        return ResponseEntity.ok(letterService.signLetter(id));
+    }
+
+    // Admin rejects letter request (from PENDING or REVIEWED)
     @PatchMapping("/{id}/reject")
     @PreAuthorize("hasAnyRole('ADMIN', 'SEKRETARIS')")
     public ResponseEntity<LetterResponse> rejectLetter(
@@ -87,9 +101,9 @@ public class LetterController {
         
         LetterResponse letter = letterService.getLetterById(id);
         
-        // Only approved letters can be downloaded
-        if (!"APPROVED".equals(letter.getStatus())) {
-            throw new RuntimeException("Hanya surat yang sudah disetujui yang bisa didownload");
+        // Only approved or signed letters can be downloaded
+        if (!"APPROVED".equals(letter.getStatus()) && !"SIGNED".equals(letter.getStatus())) {
+            throw new RuntimeException("Hanya surat yang sudah disetujui/ditandatangani yang bisa didownload");
         }
         
         // Prepare data for template from letter entity (no manual input needed)

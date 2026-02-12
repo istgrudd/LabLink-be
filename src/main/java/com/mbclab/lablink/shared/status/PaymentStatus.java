@@ -21,4 +21,8 @@ public final class PaymentStatus {
     public static boolean isVerified(String status) {
         return VERIFIED.equals(status);
     }
+    
+    public static boolean isRejected(String status) {
+        return REJECTED.equals(status);
+    }
 }

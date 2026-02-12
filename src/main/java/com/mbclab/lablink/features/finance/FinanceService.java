@@ -11,6 +11,7 @@ import com.mbclab.lablink.features.period.AcademicPeriodRepository;
 import com.mbclab.lablink.features.project.Project;
 import com.mbclab.lablink.features.project.ProjectRepository;
 import com.mbclab.lablink.shared.exception.BusinessValidationException;
+import com.mbclab.lablink.shared.status.PaymentStatus;
 import com.mbclab.lablink.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -117,21 +118,30 @@ public class FinanceService {
         AcademicPeriod period = periodRepository.findByIsActiveTrue()
                 .orElseThrow(() -> new ResourceNotFoundException("Tidak ada periode aktif"));
         
-        // Check if already paid for this month
-        if (duesRepository.findByMemberIdAndPaymentMonthAndPaymentYear(
-                memberId, request.getPaymentMonth(), request.getPaymentYear()).isPresent()) {
-            throw new BusinessValidationException("Pembayaran untuk bulan ini sudah ada");
+        // Check if already exists for this month — allow re-upload if REJECTED
+        var existing = duesRepository.findByMemberIdAndPaymentMonthAndPaymentYear(
+                memberId, request.getPaymentMonth(), request.getPaymentYear());
+        
+        DuesPayment dues;
+        if (existing.isPresent()) {
+            dues = existing.get();
+            if (!PaymentStatus.REJECTED.equals(dues.getStatus())) {
+                throw new BusinessValidationException("Pembayaran untuk bulan ini sudah ada");
+            }
+            // Re-upload: update existing REJECTED record with new proof
+        } else {
+            dues = new DuesPayment();
+            dues.setMember(member);
+            dues.setPeriod(period);
+            dues.setPaymentMonth(request.getPaymentMonth());
+            dues.setPaymentYear(request.getPaymentYear());
         }
         
-        DuesPayment dues = new DuesPayment();
-        dues.setMember(member);
-        dues.setPeriod(period);
-        dues.setPaymentMonth(request.getPaymentMonth());
-        dues.setPaymentYear(request.getPaymentYear());
         dues.setAmount(request.getAmount());
-        dues.setPaidAt(LocalDate.now());
+        dues.setPaidAt(LocalDate.now());  // Upload time
         dues.setPaymentProofPath(proofPath);
-        dues.setStatus("PENDING");
+        dues.setStatus(PaymentStatus.PENDING);
+        dues.setVerifiedBy(null);  // Clear previous rejection info
         
         DuesPayment saved = duesRepository.save(dues);
         
@@ -165,7 +175,12 @@ public class FinanceService {
         DuesPayment dues = duesRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Pembayaran tidak ditemukan"));
         
-        dues.setStatus("VERIFIED");
+        if (!PaymentStatus.PENDING.equals(dues.getStatus())) {
+            throw new BusinessValidationException("Hanya pembayaran dengan status PENDING yang bisa diverifikasi");
+        }
+        
+        dues.setStatus(PaymentStatus.VERIFIED);
+        dues.setPaidAt(LocalDate.now());  // Confirm time (overwrite upload time)
         dues.setVerifiedBy(adminUsername);
         
         DuesPayment saved = duesRepository.save(dues);
@@ -173,6 +188,28 @@ public class FinanceService {
         eventPublisher.publishEvent(AuditEvent.update(
                 "DUES_PAYMENT", saved.getId(), saved.getMember().getFullName(),
                 "Verified dues payment"));
+        
+        return toDuesResponse(saved);
+    }
+
+    @Transactional
+    public DuesPaymentResponse rejectDuesPayment(String id, String adminUsername) {
+        DuesPayment dues = duesRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Pembayaran tidak ditemukan"));
+        
+        if (!PaymentStatus.PENDING.equals(dues.getStatus())) {
+            throw new BusinessValidationException("Hanya pembayaran dengan status PENDING yang bisa ditolak");
+        }
+        
+        dues.setStatus(PaymentStatus.REJECTED);
+        dues.setVerifiedBy(adminUsername);
+        // Keep paidAt as-is (record of when user uploaded)
+        
+        DuesPayment saved = duesRepository.save(dues);
+        
+        eventPublisher.publishEvent(AuditEvent.update(
+                "DUES_PAYMENT", saved.getId(), saved.getMember().getFullName(),
+                "Rejected dues payment by " + adminUsername));
         
         return toDuesResponse(saved);
     }

@@ -84,12 +84,35 @@ public class LetterService {
     }
 
     @Transactional
-    public LetterResponse approveLetter(String id) {
+    public LetterResponse reviewLetter(String id) {
         Letter letter = letterRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Surat tidak ditemukan"));
         
         if (!"PENDING".equals(letter.getStatus())) {
-            throw new BusinessValidationException("Hanya surat dengan status PENDING yang bisa disetujui");
+            throw new BusinessValidationException("Hanya surat dengan status PENDING yang bisa di-review");
+        }
+        
+        letter.setStatus("REVIEWED");
+        String reviewer = SecurityContextHolder.getContext().getAuthentication().getName();
+        letter.setReviewedBy(reviewer);
+        
+        Letter saved = letterRepository.save(letter);
+        
+        eventPublisher.publishEvent(AuditEvent.update(
+                "LETTER", saved.getId(), saved.getSubject(),
+                "Reviewed letter by " + reviewer));
+        
+        return toResponse(saved);
+    }
+
+    @Transactional
+    public LetterResponse approveLetter(String id) {
+        Letter letter = letterRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Surat tidak ditemukan"));
+        
+        if (!"REVIEWED".equals(letter.getStatus())) {
+            throw new BusinessValidationException("Hanya surat dengan status REVIEWED yang bisa disetujui. " +
+                    "Surat harus di-review terlebih dahulu oleh Sekretaris.");
         }
         
         // Set issue date = today (tanggal surat = tanggal disetujui)
@@ -119,12 +142,37 @@ public class LetterService {
     }
 
     @Transactional
+    public LetterResponse signLetter(String id) {
+        Letter letter = letterRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Surat tidak ditemukan"));
+        
+        if (!"APPROVED".equals(letter.getStatus())) {
+            throw new BusinessValidationException("Hanya surat dengan status APPROVED yang bisa ditandatangani. " +
+                    "Surat harus di-approve terlebih dahulu.");
+        }
+        
+        letter.setStatus("SIGNED");
+        String signer = SecurityContextHolder.getContext().getAuthentication().getName();
+        letter.setSignedBy(signer);
+        
+        Letter saved = letterRepository.save(letter);
+        
+        eventPublisher.publishEvent(AuditEvent.update(
+                "LETTER", saved.getId(), saved.getSubject(),
+                "Signed letter: " + saved.getLetterNumber() + " by " + signer));
+        
+        return toResponse(saved);
+    }
+
+    @Transactional
     public LetterResponse rejectLetter(String id, String reason) {
         Letter letter = letterRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Surat tidak ditemukan"));
         
-        if (!"PENDING".equals(letter.getStatus())) {
-            throw new BusinessValidationException("Hanya surat dengan status PENDING yang bisa ditolak");
+        // Allow reject from PENDING or REVIEWED
+        if (!"PENDING".equals(letter.getStatus()) && !"REVIEWED".equals(letter.getStatus())) {
+            throw new BusinessValidationException(
+                    "Hanya surat dengan status PENDING atau REVIEWED yang bisa ditolak");
         }
         
         letter.setStatus("REJECTED");
@@ -246,7 +294,10 @@ public class LetterService {
                     .borrowReturnDate(letter.getBorrowReturnDate())
                     .issueDate(letter.getIssueDate())
                     .status(letter.getStatus())
+                    .createdBy(letter.getRequesterName())
+                    .reviewedBy(letter.getReviewedBy())
                     .approvedBy(letter.getApprovedBy())
+                    .signedBy(letter.getSignedBy())
                     .rejectionReason(letter.getRejectionReason())
                     .event(eventSummary)
                     .createdAt(letter.getCreatedAt())

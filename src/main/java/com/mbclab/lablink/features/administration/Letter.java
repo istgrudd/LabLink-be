@@ -14,7 +14,7 @@ import java.time.LocalDate;
  * Entity untuk Surat Keluar dengan Workflow Approval.
  * 
  * Format Nomor: 001/PMJ/EXT/MBC/XII/2025
- * Status Flow: PENDING -> APPROVED/REJECTED -> DOWNLOADED
+ * Status Flow: PENDING → REVIEWED → APPROVED → SIGNED
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -65,7 +65,7 @@ public class Letter extends BaseEntity {
     // issueDate set on APPROVAL (tanggal surat = tanggal disetujui)
     private LocalDate issueDate;
     
-    // ==== STATUS: PENDING, APPROVED, REJECTED, DOWNLOADED ====
+    // ==== STATUS: PENDING → REVIEWED → APPROVED → SIGNED ====
     private String status = "PENDING";
 
     // Periode kepengurusan
@@ -78,7 +78,13 @@ public class Letter extends BaseEntity {
     @JoinColumn(name = "event_id")
     private Event event;
 
-    // Who approved/rejected
+    // Who reviewed (Sekretaris)
+    private String reviewedBy;
+    
+    // Who approved/rejected (Ketua/Dosen)
     private String approvedBy;
     private String rejectionReason;
+    
+    // Who signed (tanda tangan & stempel)
+    private String signedBy;
 }

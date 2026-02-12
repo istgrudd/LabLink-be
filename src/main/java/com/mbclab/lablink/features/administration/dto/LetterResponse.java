@@ -35,11 +35,16 @@ public class LetterResponse extends BaseResponse {
     // Dates
     private LocalDate issueDate;  // Set on approval
     
-    // Status: PENDING, APPROVED, REJECTED, DOWNLOADED
+    // Status: PENDING → REVIEWED → APPROVED → SIGNED
     private String status;
     
-    // Approval info
+    // Who created this letter request
+    private String createdBy;
+    
+    // Approval workflow info
+    private String reviewedBy;
     private String approvedBy;
+    private String signedBy;
     private String rejectionReason;
     
     // Event info (if linked)

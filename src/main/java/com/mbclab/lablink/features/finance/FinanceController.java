@@ -108,6 +108,15 @@ public class FinanceController {
         return ResponseEntity.ok(financeService.verifyDuesPayment(id, admin.getUsername()));
     }
 
+    @PostMapping("/dues/{id}/reject")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
+    public ResponseEntity<DuesPaymentResponse> rejectDuesPayment(
+            @PathVariable String id,
+            @RequestHeader("Authorization") String authHeader) {
+        AppUser admin = getUserFromToken(authHeader);
+        return ResponseEntity.ok(financeService.rejectDuesPayment(id, admin.getUsername()));
+    }
+
     // ==================== TRANSACTIONS ====================
 
     @PostMapping(value = "/transactions", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
