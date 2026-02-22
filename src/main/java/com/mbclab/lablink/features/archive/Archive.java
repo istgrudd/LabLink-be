@@ -1,7 +1,6 @@
 package com.mbclab.lablink.features.archive;
 
 import com.mbclab.lablink.features.event.Event;
-import com.mbclab.lablink.features.period.AcademicPeriod;
 import com.mbclab.lablink.features.project.Project;
 import com.mbclab.lablink.shared.BaseEntity;
 import jakarta.persistence.*;
@@ -21,7 +20,6 @@ import java.time.LocalDate;
 @EqualsAndHashCode(callSuper = true)
 @Entity
 @Table(name = "archives", indexes = {
-    @Index(name = "idx_archive_period_id", columnList = "period_id"),
     @Index(name = "idx_archive_type", columnList = "archiveType"),
     @Index(name = "idx_archive_project_id", columnList = "project_id"),
     @Index(name = "idx_archive_event_id", columnList = "event_id")
@@ -60,10 +58,7 @@ public class Archive extends BaseEntity {
     @JoinColumn(name = "event_id")
     private Event event;
 
-    // Periode kepengurusan
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "period_id")
-    private AcademicPeriod period;
+
 
     // Publication details
     private String publishLocation;  // Nama jurnal, konferensi, lembaga

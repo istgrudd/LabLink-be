@@ -9,16 +9,8 @@ import java.util.Optional;
 @Repository
 public interface EventRepository extends ApprovalRepository<Event, String> {
     Optional<Event> findByEventCode(String eventCode);
-    List<Event> findByPeriodId(String periodId);
-    long countByEventCodeStartingWith(String prefix);
-    int countByPeriodId(String periodId);
-    
-    // For cascade delete
-    // For cascade delete
-    void deleteByPeriodId(String periodId);
 
-    // For orphan filter
-    List<Event> findByPeriodIsNull();
+    long countByEventCodeStartingWith(String prefix);
     
     // For approval workflow
     List<Event> findByApprovalStatus(String approvalStatus);

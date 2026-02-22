@@ -20,9 +20,6 @@ public class DuesPaymentResponse extends BaseResponse {
     private String memberName;
     private String memberNim;
     
-    private String periodId;
-    private String periodName;
-    
     private Integer paymentMonth;
     private Integer paymentYear;
     private BigDecimal amount;

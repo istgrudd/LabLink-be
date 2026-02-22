@@ -8,10 +8,7 @@ import com.mbclab.lablink.features.member.dto.CreateMemberRequest;
 import com.mbclab.lablink.features.member.dto.MemberResponse;
 import com.mbclab.lablink.features.member.dto.RoleResponse;
 import com.mbclab.lablink.features.member.dto.UpdateMemberRequest;
-import com.mbclab.lablink.features.period.AcademicPeriod;
-import com.mbclab.lablink.features.period.AcademicPeriodRepository;
-import com.mbclab.lablink.features.period.MemberPeriod;
-import com.mbclab.lablink.features.period.MemberPeriodRepository;
+
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -25,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,8 +31,6 @@ public class MemberService {
 
     private final MemberRepository memberRepository;
     private final MemberRoleRepository memberRoleRepository;
-    private final AcademicPeriodRepository periodRepository;
-    private final MemberPeriodRepository memberPeriodRepository;
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -65,13 +59,6 @@ public class MemberService {
         // Assign default ASSISTANT role
         MemberRole defaultRole = new MemberRole(saved, Role.ASSISTANT, "SYSTEM");
         memberRoleRepository.save(defaultRole);
-        
-        // Auto-associate dengan active period jika ada
-        Optional<AcademicPeriod> activePeriod = periodRepository.findByIsActiveTrue();
-        if (activePeriod.isPresent()) {
-            MemberPeriod mp = new MemberPeriod(saved, activePeriod.get(), request.getPosition());
-            memberPeriodRepository.save(mp);
-        }
         
         eventPublisher.publishEvent(AuditEvent.create(
                 "MEMBER", saved.getId(), saved.getFullName(),

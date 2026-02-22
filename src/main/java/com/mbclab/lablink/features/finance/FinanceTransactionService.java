@@ -6,8 +6,6 @@ import com.mbclab.lablink.features.event.EventRepository;
 import com.mbclab.lablink.features.finance.dto.TransactionRequest;
 import com.mbclab.lablink.features.finance.dto.TransactionResponse;
 import com.mbclab.lablink.features.finance.dto.TransactionSummaryResponse;
-import com.mbclab.lablink.features.period.AcademicPeriod;
-import com.mbclab.lablink.features.period.AcademicPeriodRepository;
 import com.mbclab.lablink.features.project.Project;
 import com.mbclab.lablink.features.project.ProjectRepository;
 import com.mbclab.lablink.shared.FileStorageService;
@@ -37,7 +35,6 @@ public class FinanceTransactionService {
     private final FinanceCategoryRepository categoryRepository;
     private final EventRepository eventRepository;
     private final ProjectRepository projectRepository;
-    private final AcademicPeriodRepository periodRepository;
     private final FileStorageService fileStorageService;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -45,9 +42,6 @@ public class FinanceTransactionService {
     public TransactionResponse createTransaction(TransactionRequest request, MultipartFile receiptFile, String createdBy) {
         FinanceCategory category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Kategori tidak ditemukan"));
-        
-        AcademicPeriod activePeriod = periodRepository.findByIsActiveTrue()
-                .orElseThrow(() -> new ResourceNotFoundException("Tidak ada periode aktif. Transaksi harus tercatat dalam periode aktif."));
 
         // Store receipt file in service layer (SoC — not in controller)
         String receiptPath = receiptFile != null ? fileStorageService.storeFile(receiptFile) : null;
@@ -60,7 +54,6 @@ public class FinanceTransactionService {
         tx.setDescription(request.getDescription());
         tx.setReceiptPath(receiptPath);
         tx.setCreatedBy(createdBy);
-        tx.setPeriod(activePeriod);
         
         // Cost center
         if (request.getEventId() != null) {

@@ -2,7 +2,6 @@ package com.mbclab.lablink.features.administration;
 
 import com.mbclab.lablink.features.event.Event;
 import com.mbclab.lablink.features.member.ResearchAssistant;
-import com.mbclab.lablink.features.period.AcademicPeriod;
 import com.mbclab.lablink.shared.BaseEntity;
 import com.mbclab.lablink.shared.status.LetterStatus;
 import jakarta.persistence.*;
@@ -22,7 +21,6 @@ import java.time.LocalDate;
 @Entity
 @Table(name = "letters", indexes = {
     @Index(name = "idx_letter_status", columnList = "status"),
-    @Index(name = "idx_letter_period_id", columnList = "period_id"),
     @Index(name = "idx_letter_requester_id", columnList = "requester_id")
 })
 public class Letter extends BaseEntity {
@@ -51,7 +49,9 @@ public class Letter extends BaseEntity {
     private String attachment;  // Lampiran
 
     // ==== REQUESTER INFO (auto-filled from user) ====
-    @ManyToOne(fetch = FetchType.LAZY)
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
+    @ManyToOne
     @JoinColumn(name = "requester_id")
     private ResearchAssistant requester;
 
@@ -71,13 +71,11 @@ public class Letter extends BaseEntity {
     @Column(nullable = false)
     private LetterStatus status = LetterStatus.PENDING;
 
-    // Periode kepengurusan
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "period_id")
-    private AcademicPeriod period;
 
     // Link ke Event terkait (required for context)
-    @ManyToOne(fetch = FetchType.LAZY)
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
+    @ManyToOne
     @JoinColumn(name = "event_id")
     private Event event;
 

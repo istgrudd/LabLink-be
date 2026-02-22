@@ -15,14 +15,8 @@ import org.springframework.context.annotation.Configuration;
 @EnableCaching
 public class CacheConfig {
 
-    public static final String ACTIVE_PERIOD_CACHE = "activePeriod";
-    public static final String ALL_PERIODS_CACHE = "allPeriods";
-    
     @Bean
     public CacheManager cacheManager() {
-        return new ConcurrentMapCacheManager(
-                ACTIVE_PERIOD_CACHE,
-                ALL_PERIODS_CACHE
-        );
+        return new ConcurrentMapCacheManager();
     }
 }

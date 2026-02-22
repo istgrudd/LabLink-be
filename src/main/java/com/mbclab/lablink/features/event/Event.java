@@ -1,7 +1,6 @@
 package com.mbclab.lablink.features.event;
 
 import com.mbclab.lablink.features.member.ResearchAssistant;
-import com.mbclab.lablink.features.period.AcademicPeriod;
 import com.mbclab.lablink.shared.BaseEntity;
 import com.mbclab.lablink.shared.approval.Approvable;
 import jakarta.persistence.*;
@@ -16,7 +15,6 @@ import java.util.Set;
 @EqualsAndHashCode(callSuper = true)
 @Entity
 @Table(name = "events", indexes = {
-    @Index(name = "idx_event_period_id", columnList = "period_id"),
     @Index(name = "idx_event_start_date", columnList = "startDate"),
     @Index(name = "idx_event_status", columnList = "status"),
     @Index(name = "idx_event_approval_status", columnList = "approvalStatus")
@@ -58,13 +56,11 @@ public class Event extends BaseEntity implements Approvable {
 
     // ========== RELASI ==========
 
-    // Periode kepengurusan
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "period_id")
-    private AcademicPeriod period;
 
     // Person In Charge (Ketua Pelaksana)
-    @ManyToOne(fetch = FetchType.LAZY)
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
+    @ManyToOne
     @JoinColumn(name = "pic_id", nullable = false)
     private ResearchAssistant pic;
 

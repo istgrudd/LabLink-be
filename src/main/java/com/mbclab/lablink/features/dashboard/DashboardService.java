@@ -8,9 +8,6 @@ import com.mbclab.lablink.features.event.Event;
 import com.mbclab.lablink.features.event.EventRepository;
 import com.mbclab.lablink.features.administration.LetterRepository;
 import com.mbclab.lablink.features.member.MemberRepository;
-import com.mbclab.lablink.features.period.AcademicPeriod;
-import com.mbclab.lablink.features.period.AcademicPeriodRepository;
-import com.mbclab.lablink.features.period.MemberPeriodRepository;
 import com.mbclab.lablink.features.project.Project;
 import com.mbclab.lablink.features.project.ProjectRepository;
 import lombok.RequiredArgsConstructor;
@@ -38,35 +35,20 @@ public class DashboardService {
     private final ArchiveRepository archiveRepository;
     private final LetterRepository letterRepository;
     private final ActivityLogRepository activityLogRepository;
-    private final AcademicPeriodRepository periodRepository;
-    private final MemberPeriodRepository memberPeriodRepository;
+
 
     public DashboardResponse getDashboardSummary() {
-        // Get active period
-        AcademicPeriod activePeriod = periodRepository.findByIsActiveTrue().orElse(null);
-        
         return DashboardResponse.builder()
-                .statistics(buildStatistics(activePeriod))
-                .upcomingDeadlines(buildUpcomingDeadlines(activePeriod))
+                .statistics(buildStatistics())
+                .upcomingDeadlines(buildUpcomingDeadlines())
                 .recentActivities(buildRecentActivities())
                 .build();
     }
 
-    private DashboardResponse.Statistics buildStatistics(AcademicPeriod activePeriod) {
-        List<Project> allProjects;
-        List<Event> allEvents;
-        int activeMembers;
-        
-        if (activePeriod != null) {
-            allProjects = projectRepository.findByPeriodId(activePeriod.getId());
-            allEvents = eventRepository.findByPeriodId(activePeriod.getId());
-            activeMembers = memberPeriodRepository.findByPeriodIdAndStatus(
-                    activePeriod.getId(), "ACTIVE").size();
-        } else {
-            allProjects = projectRepository.findAll();
-            allEvents = eventRepository.findAll();
-            activeMembers = (int) memberRepository.count();
-        }
+    private DashboardResponse.Statistics buildStatistics() {
+        List<Project> allProjects = projectRepository.findAll();
+        List<Event> allEvents = eventRepository.findAll();
+        int activeMembers = (int) memberRepository.count();
         
         int activeProjects = (int) allProjects.stream()
                 .filter(p -> "IN_PROGRESS".equals(p.getStatus()))
@@ -96,18 +78,13 @@ public class DashboardService {
                 .build();
     }
 
-    private List<DashboardResponse.UpcomingItem> buildUpcomingDeadlines(AcademicPeriod activePeriod) {
+    private List<DashboardResponse.UpcomingItem> buildUpcomingDeadlines() {
         List<DashboardResponse.UpcomingItem> items = new ArrayList<>();
         LocalDate today = LocalDate.now();
         LocalDate nextMonth = today.plusDays(30);
         
         // Get projects with upcoming deadlines
-        List<Project> projects;
-        if (activePeriod != null) {
-            projects = projectRepository.findByPeriodId(activePeriod.getId());
-        } else {
-            projects = projectRepository.findAll();
-        }
+        List<Project> projects = projectRepository.findAll();
         
         projects.stream()
                 .filter(p -> p.getEndDate() != null)
@@ -124,12 +101,7 @@ public class DashboardService {
                         .build()));
         
         // Get events starting soon
-        List<Event> events;
-        if (activePeriod != null) {
-            events = eventRepository.findByPeriodId(activePeriod.getId());
-        } else {
-            events = eventRepository.findAll();
-        }
+        List<Event> events = eventRepository.findAll();
         
         events.stream()
                 .filter(e -> e.getStartDate() != null)

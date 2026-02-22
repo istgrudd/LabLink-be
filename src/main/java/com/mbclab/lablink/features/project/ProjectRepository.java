@@ -20,9 +20,6 @@ public interface ProjectRepository extends ApprovalRepository<Project, String> {
     List<Project> findByActivityType(String activityType);
 
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"leader", "teamMembers"})
-    List<Project> findByPeriodId(String periodId);
-    
-    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"leader", "teamMembers"})
     Optional<Project> findByProjectCode(String projectCode);
     
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"leader", "teamMembers"})
@@ -30,16 +27,6 @@ public interface ProjectRepository extends ApprovalRepository<Project, String> {
     
     // Untuk generate project code
     long countByActivityType(String activityType);
-    
-    // Untuk period summary
-    int countByPeriodId(String periodId);
-    
-    // For cascade delete
-    void deleteByPeriodId(String periodId);
-    
-    // For orphan filter
-    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"leader", "teamMembers"})
-    List<Project> findByPeriodIsNull();
     
     // For approval workflow
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"leader", "teamMembers"})

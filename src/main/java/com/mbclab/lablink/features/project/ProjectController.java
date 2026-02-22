@@ -36,21 +36,8 @@ public class ProjectController {
     @GetMapping
     public ResponseEntity<Page<ProjectResponse>> getAllProjects(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String periodId) {
-        if (periodId != null && !periodId.isBlank()) {
-            List<ProjectResponse> all = projectService.getProjectsByPeriod(periodId);
-            org.springframework.data.domain.Pageable pageableReq = org.springframework.data.domain.PageRequest.of(page, size);
-            int start = Math.min((int)pageableReq.getOffset(), all.size());
-            int end = Math.min((start + size), all.size());
-            return ResponseEntity.ok(new org.springframework.data.domain.PageImpl<>(all.subList(start, end), pageableReq, all.size()));
-        }
+            @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(projectService.getAllProjects(page, size));
-    }
-    
-    @GetMapping("/by-period/{periodId}")
-    public ResponseEntity<List<ProjectResponse>> getProjectsByPeriod(@PathVariable String periodId) {
-        return ResponseEntity.ok(projectService.getProjectsByPeriod(periodId));
     }
 
     @GetMapping("/{id}")

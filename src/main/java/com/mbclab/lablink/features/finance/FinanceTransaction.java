@@ -1,7 +1,6 @@
 package com.mbclab.lablink.features.finance;
 
 import com.mbclab.lablink.features.event.Event;
-import com.mbclab.lablink.features.period.AcademicPeriod;
 import com.mbclab.lablink.features.project.Project;
 import com.mbclab.lablink.shared.BaseEntity;
 import jakarta.persistence.*;
@@ -24,8 +23,7 @@ import java.time.LocalDate;
     @Index(name = "idx_transaction_category_id", columnList = "category_id"),
     @Index(name = "idx_transaction_date", columnList = "transactionDate"),
     @Index(name = "idx_transaction_event_id", columnList = "event_id"),
-    @Index(name = "idx_transaction_project_id", columnList = "project_id"),
-    @Index(name = "idx_transaction_period_id", columnList = "period_id")
+    @Index(name = "idx_transaction_project_id", columnList = "project_id")
 })
 public class FinanceTransaction extends BaseEntity {
 
@@ -61,11 +59,7 @@ public class FinanceTransaction extends BaseEntity {
     @JoinColumn(name = "project_id")
     private Project project;
 
-    // === Period Link (Mandatory for Cascade Delete) ===
-    
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "period_id") // Should ideally be nullable=false, but set to true for now to avoid break existing. Will be enforced in service.
-    private AcademicPeriod period;
+
 
     // === Future: Budget tracking ===
     

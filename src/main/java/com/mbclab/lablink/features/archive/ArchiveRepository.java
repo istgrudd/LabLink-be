@@ -13,13 +13,5 @@ public interface ArchiveRepository extends JpaRepository<Archive, String> {
     List<Archive> findByEventId(String eventId);
     List<Archive> findByDepartment(String department);
     List<Archive> findByArchiveType(String archiveType);
-    List<Archive> findByPeriodId(String periodId);
     long countByArchiveCodeStartingWith(String prefix);
-    
-    // For cascade delete
-    // For cascade delete
-    void deleteByPeriodId(String periodId);
-    
-    // For orphan filter
-    List<Archive> findByPeriodIsNull();
 }

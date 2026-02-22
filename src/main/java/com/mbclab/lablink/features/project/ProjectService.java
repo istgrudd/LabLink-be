@@ -5,7 +5,6 @@ import com.mbclab.lablink.features.member.MemberRepository;
 import com.mbclab.lablink.features.member.MemberRoleRepository;
 import com.mbclab.lablink.features.member.ResearchAssistant;
 import com.mbclab.lablink.features.member.Role;
-import com.mbclab.lablink.features.period.AcademicPeriodRepository;
 import com.mbclab.lablink.features.project.dto.CreateProjectRequest;
 import com.mbclab.lablink.features.project.dto.ProjectResponse;
 import com.mbclab.lablink.features.project.dto.UpdateProjectRequest;
@@ -35,7 +34,6 @@ public class ProjectService {
     private final MemberRepository memberRepository;
     private final MemberRoleRepository memberRoleRepository;
     private final ProjectCodeGenerator projectCodeGenerator;
-    private final AcademicPeriodRepository periodRepository;
     private final com.mbclab.lablink.features.archive.ArchiveRepository archiveRepository;
     private final ApplicationEventPublisher eventPublisher;
     
@@ -76,8 +74,6 @@ public class ProjectService {
         project.setLeader(leader);
         project.setTeamMembers(teamMembers);
         
-        periodRepository.findByIsActiveTrue().ifPresent(project::setPeriod);
-        
         Project saved = projectRepository.save(project);
         
         eventPublisher.publishEvent(AuditEvent.create(
@@ -100,17 +96,7 @@ public class ProjectService {
                 .collect(Collectors.toList());
     }
 
-    public List<ProjectResponse> getProjectsByPeriod(String periodId) {
-        return projectRepository.findByPeriodId(periodId).stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
-    }
 
-    public List<ProjectResponse> getOrphanProjects() {
-        return projectRepository.findByPeriodIsNull().stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
-    }
 
     public List<ProjectResponse> getPendingProjects() {
         // Delegate to approval service

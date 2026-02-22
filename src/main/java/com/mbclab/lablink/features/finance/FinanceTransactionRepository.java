@@ -34,6 +34,4 @@ public interface FinanceTransactionRepository extends JpaRepository<FinanceTrans
     
     @Query("SELECT t.category.name, SUM(t.amount) FROM FinanceTransaction t WHERE t.type = :type GROUP BY t.category.name")
     List<Object[]> getSummaryByCategory(String type);
-    
-    void deleteByPeriodId(String periodId);
 }

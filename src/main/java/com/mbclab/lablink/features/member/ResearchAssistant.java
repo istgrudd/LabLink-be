@@ -33,6 +33,8 @@ public class ResearchAssistant extends AppUser {
     private boolean isActive = true;
     
     // Multiple roles support
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<MemberRole> memberRoles = new ArrayList<>();
 }

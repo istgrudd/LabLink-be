@@ -5,8 +5,6 @@ import com.mbclab.lablink.features.finance.dto.DuesPaymentRequest;
 import com.mbclab.lablink.features.finance.dto.DuesPaymentResponse;
 import com.mbclab.lablink.features.member.MemberRepository;
 import com.mbclab.lablink.features.member.ResearchAssistant;
-import com.mbclab.lablink.features.period.AcademicPeriod;
-import com.mbclab.lablink.features.period.AcademicPeriodRepository;
 import com.mbclab.lablink.shared.FileStorageService;
 import com.mbclab.lablink.shared.exception.BusinessValidationException;
 import com.mbclab.lablink.shared.exception.ResourceNotFoundException;
@@ -34,7 +32,6 @@ public class DuesPaymentService {
 
     private final DuesPaymentRepository duesRepository;
     private final MemberRepository memberRepository;
-    private final AcademicPeriodRepository periodRepository;
     private final FileStorageService fileStorageService;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -42,9 +39,6 @@ public class DuesPaymentService {
     public DuesPaymentResponse submitDuesPayment(String memberId, DuesPaymentRequest request, MultipartFile file) {
         ResearchAssistant member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ResourceNotFoundException("Member tidak ditemukan"));
-        
-        AcademicPeriod period = periodRepository.findByIsActiveTrue()
-                .orElseThrow(() -> new ResourceNotFoundException("Tidak ada periode aktif"));
         
         // Check if already exists for this month — allow re-upload if REJECTED
         var existing = duesRepository.findByMemberIdAndPaymentMonthAndPaymentYear(
@@ -60,7 +54,6 @@ public class DuesPaymentService {
         } else {
             dues = new DuesPayment();
             dues.setMember(member);
-            dues.setPeriod(period);
             dues.setPaymentMonth(request.getPaymentMonth());
             dues.setPaymentYear(request.getPaymentYear());
         }
@@ -159,8 +152,6 @@ public class DuesPaymentService {
                 .memberId(d.getMember().getId())
                 .memberName(d.getMember().getFullName())
                 .memberNim(d.getMember().getUsername())
-                .periodId(d.getPeriod().getId())
-                .periodName(d.getPeriod().getName())
                 .paymentMonth(d.getPaymentMonth())
                 .paymentYear(d.getPaymentYear())
                 .amount(d.getAmount())

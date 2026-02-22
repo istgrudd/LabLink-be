@@ -6,7 +6,6 @@ import com.mbclab.lablink.features.auth.AppUser;
 import com.mbclab.lablink.features.auth.AuthService;
 import com.mbclab.lablink.features.member.MemberRepository;
 import com.mbclab.lablink.features.member.ResearchAssistant;
-import com.mbclab.lablink.features.period.AcademicPeriodRepository;
 import com.mbclab.lablink.features.presence.dto.CreatePresenceRequest;
 import com.mbclab.lablink.features.presence.dto.PresenceResponse;
 import com.mbclab.lablink.shared.FileStorageService;
@@ -30,7 +29,6 @@ public class PresenceController {
 
     private final PresenceRepository presenceRepository;
     private final MemberRepository memberRepository;
-    private final AcademicPeriodRepository periodRepository;
     private final AuthService authService;
     private final FileStorageService fileStorageService;
     private final ObjectMapper objectMapper;
@@ -63,9 +61,6 @@ public class PresenceController {
             presence.setTitle(request.getTitle() != null ? request.getTitle() : "Presence");
             presence.setImagePath(fileName);
             presence.setNotes(request.getNotes());
-            
-            // 5. Auto-assign to active period
-            periodRepository.findByIsActiveTrue().ifPresent(presence::setPeriod);
 
             Presence saved = presenceRepository.save(presence);
 
@@ -136,8 +131,6 @@ public class PresenceController {
                 .title(p.getTitle())
                 .imageUrl(fileDownloadUri)
                 .notes(p.getNotes())
-                .periodId(p.getPeriod() != null ? p.getPeriod().getId() : null)
-                .periodName(p.getPeriod() != null ? p.getPeriod().getName() : null)
                 .createdAt(p.getCreatedAt())
                 .updatedAt(p.getUpdatedAt())
                 .build();

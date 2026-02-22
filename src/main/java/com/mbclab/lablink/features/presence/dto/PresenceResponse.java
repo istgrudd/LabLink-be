@@ -22,8 +22,4 @@ public class PresenceResponse extends BaseResponse {
     private String title;
     private String imageUrl; // Full URL to access image
     private String notes;
-    
-    // Period info
-    private String periodId;
-    private String periodName;
 }

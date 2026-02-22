@@ -26,6 +26,8 @@ public class MemberRole {
     @UuidGenerator
     private String id;
 
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
     private ResearchAssistant member;

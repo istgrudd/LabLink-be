@@ -1,0 +1,75 @@
+﻿
+========== 1. Create Period ==========
+ERROR STATUS: InternalServerError
+ERROR: The remote server returned an error: (500) Internal Server Error.
+ERROR BODY: {"error":"Internal Server Error","message":"Terjadi kesalahan internal. Silakan coba lagi atau hubungi administrator.","timestamp":"2026-02-19T21:01:51.694616200","status":500}
+
+========== GET ALL PERIODS ==========
+
+========== GET Periods ==========
+STATUS: 200
+RESPONSE: [{"active":false,"archived":true,"code":"P2024-1","createdAt":"2026-01-20T01:58:43.907372","endDate":"2025-08-17","id":"750cf420-fe58-439e-bcb7-bb03720ec261","isActive":false,"isArchived":true,"name":"2024-2025","startDate":"2024-10-17","totalEvents":4,"totalMembers":1,"totalProjects":2,"updatedAt":"2026-01-20T03:29:08.550812"},{"active":false,"archived":true,"code":"P2025-1","createdAt":"2026-01-20T03:29:29.809156","endDate":"2026-08-20","id":"e909dd99-408f-4ee6-ac69-91826e2451ef","isActive":fa
+Using period ID: 750cf420-fe58-439e-bcb7-bb03720ec261
+
+========== 2. Activate Period ==========
+ERROR STATUS: BadRequest
+ERROR: The remote server returned an error: (400) Bad Request.
+ERROR BODY: {"error":"Business Validation Error","message":"Tidak bisa mengaktifkan periode yang sudah diarsipkan","timestamp":"2026-02-19T21:01:51.841660100","status":400}
+
+========== 3. Close Period ==========
+ERROR STATUS: BadRequest
+ERROR: The remote server returned an error: (400) Bad Request.
+ERROR BODY: {"error":"Business Validation Error","message":"Hanya periode aktif yang bisa ditutup","timestamp":"2026-02-19T21:01:51.896646800","status":400}
+
+========== GET MEMBERS ==========
+
+========== GET Members ==========
+STATUS: 200
+RESPONSE: {"content":[{"active":true,"createdAt":"2026-02-19T20:56:33.290024","department":"Internal","email":null,"expertDivision":"GIS","fullName":"Budi Santoso","id":"e6e709de-1f38-4877-bda2-9b4cbd004817","isPasswordChanged":false,"passwordChanged":false,"phoneNumber":null,"roles":[{"description":"Akses dasar untuk asisten biasa","displayName":"Asisten","role":"ASSISTANT"}],"socialMediaLink":null,"updatedAt":"2026-02-19T20:56:33.290024","username":"20210053244"},{"active":true,"createdAt":"2026-02-18T1
+
+========== 5. Create Event ==========
+ERROR STATUS: BadRequest
+ERROR: The remote server returned an error: (400) Bad Request.
+ERROR BODY: {"fieldErrors":{"picId":"PIC ID wajib diisi","startDate":"Tanggal mulai wajib diisi"},"error":"Validation Failed","message":"Input tidak valid. Periksa field berikut.","timestamp":"2026-02-19T21:01:51.963481700","status":400}
+
+========== 6. List Events ==========
+ERROR STATUS: InternalServerError
+ERROR: The remote server returned an error: (500) Internal Server Error.
+ERROR BODY: {"error":"Internal Server Error","message":"Terjadi kesalahan internal. Silakan coba lagi atau hubungi administrator.","timestamp":"2026-02-19T21:01:51.987532500","status":500}
+
+========== 7. Create Category Finance ==========
+ERROR STATUS: BadRequest
+ERROR: The remote server returned an error: (400) Bad Request.
+ERROR BODY: {"error":"Business Validation Error","message":"Kategori dengan nama 'Test Category' sudah ada","timestamp":"2026-02-19T21:01:52.025194400","status":400}
+
+========== 8. Create Transaction ==========
+ERROR STATUS: NotFound
+ERROR: The remote server returned an error: (404) Not Found.
+ERROR BODY: {"error":"Not Found","message":"Kategori tidak ditemukan","timestamp":"2026-02-19T21:01:52.060067500","status":404}
+
+========== Test GET Letters first ==========
+
+========== GET Letters (for approve test) ==========
+ERROR STATUS: InternalServerError
+ERROR: The remote server returned an error: (500) Internal Server Error.
+ERROR BODY: {"error":"Internal Server Error","message":"Terjadi kesalahan internal. Silakan coba lagi atau hubungi administrator.","timestamp":"2026-02-19T21:01:52.089178100","status":500}
+
+========== 9. PATCH Approve Letter (dummy) ==========
+ERROR STATUS: NotFound
+ERROR: The remote server returned an error: (404) Not Found.
+ERROR BODY: {"error":"Not Found","message":"Surat tidak ditemukan","timestamp":"2026-02-19T21:01:52.127926400","status":404}
+
+========== 10. List Letters ==========
+ERROR STATUS: InternalServerError
+ERROR: The remote server returned an error: (500) Internal Server Error.
+ERROR BODY: {"error":"Internal Server Error","message":"Terjadi kesalahan internal. Silakan coba lagi atau hubungi administrator.","timestamp":"2026-02-19T21:01:52.152626","status":500}
+
+========== 11. Create Archive ==========
+ERROR STATUS: BadRequest
+ERROR: The remote server returned an error: (400) Bad Request.
+ERROR BODY: {"fieldErrors":{"sourceType":"Source type wajib dipilih"},"error":"Validation Failed","message":"Input tidak valid. Periksa field berikut.","timestamp":"2026-02-19T21:01:52.184653600","status":400}
+
+========== 12. Dashboard Summary ==========
+ERROR STATUS: InternalServerError
+ERROR: The remote server returned an error: (500) Internal Server Error.
+ERROR BODY: {"error":"Internal Server Error","message":"Terjadi kesalahan internal. Silakan coba lagi atau hubungi administrator.","timestamp":"2026-02-19T21:01:52.221869","status":500}

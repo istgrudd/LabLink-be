@@ -33,11 +33,7 @@ public class EventController {
     
     @GetMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<EventResponse>> getAllEvents(
-            @RequestParam(required = false) String periodId) {
-        if (periodId != null && !periodId.isBlank()) {
-            return ResponseEntity.ok(eventService.getEventsByPeriod(periodId));
-        }
+    public ResponseEntity<List<EventResponse>> getAllEvents() {
         return ResponseEntity.ok(eventService.getAllEvents());
     }
 

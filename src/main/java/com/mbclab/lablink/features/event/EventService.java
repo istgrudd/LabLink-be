@@ -4,7 +4,6 @@ import com.mbclab.lablink.features.activitylog.AuditEvent;
 import com.mbclab.lablink.features.event.dto.*;
 import com.mbclab.lablink.features.member.MemberRepository;
 import com.mbclab.lablink.features.member.ResearchAssistant;
-import com.mbclab.lablink.features.period.AcademicPeriodRepository;
 import com.mbclab.lablink.shared.exception.BusinessValidationException;
 import com.mbclab.lablink.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +24,6 @@ public class EventService {
     private final EventScheduleRepository scheduleRepository;
     private final MemberRepository memberRepository;
     private final EventCodeGenerator eventCodeGenerator;
-    private final AcademicPeriodRepository periodRepository;
     private final com.mbclab.lablink.features.archive.ArchiveRepository archiveRepository;
     private final ApplicationEventPublisher eventPublisher;
     
@@ -52,9 +50,6 @@ public class EventService {
         event.setEndDate(request.getEndDate());
         event.setStatus("PLANNED");
         event.setPic(pic);
-        
-        // 4. Auto-assign to active period
-        periodRepository.findByIsActiveTrue().ifPresent(event::setPeriod);
         
         Event saved = eventRepository.save(event);
         
@@ -97,17 +92,7 @@ public class EventService {
                 .collect(Collectors.toList());
     }
 
-    public List<EventResponse> getEventsByPeriod(String periodId) {
-        return eventRepository.findByPeriodId(periodId).stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
-    }
 
-    public List<EventResponse> getOrphanEvents() {
-        return eventRepository.findByPeriodIsNull().stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
-    }
 
     public EventResponse getEventById(String id) {
         Event event = eventRepository.findById(id)
@@ -440,6 +425,7 @@ public class EventService {
                 .rejectionReason(event.getRejectionReason())
                 .approvedAt(event.getApprovedAt())
                 .approvedBy(event.getApprovedBy())
+
                 .createdAt(event.getCreatedAt())
                 .updatedAt(event.getUpdatedAt())
                 .pic(picSummary)

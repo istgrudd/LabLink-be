@@ -1,7 +1,6 @@
 package com.mbclab.lablink.features.finance;
 
 import com.mbclab.lablink.features.member.ResearchAssistant;
-import com.mbclab.lablink.features.period.AcademicPeriod;
 import com.mbclab.lablink.shared.BaseEntity;
 import com.mbclab.lablink.shared.status.PaymentStatus;
 import jakarta.persistence.*;
@@ -20,7 +19,6 @@ import java.time.LocalDate;
 @Entity
 @Table(name = "dues_payments", indexes = {
     @Index(name = "idx_dues_member_id", columnList = "member_id"),
-    @Index(name = "idx_dues_period_id", columnList = "period_id"),
     @Index(name = "idx_dues_payment_month", columnList = "paymentMonth, paymentYear"),
     @Index(name = "idx_dues_status", columnList = "status")
 })
@@ -30,9 +28,7 @@ public class DuesPayment extends BaseEntity {
     @JoinColumn(name = "member_id", nullable = false)
     private ResearchAssistant member;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "period_id", nullable = false)
-    private AcademicPeriod period;
+
 
     @Column(nullable = false)
     private Integer paymentMonth;  // 1-12

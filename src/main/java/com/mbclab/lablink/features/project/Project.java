@@ -1,7 +1,6 @@
 package com.mbclab.lablink.features.project;
 
 import com.mbclab.lablink.features.member.ResearchAssistant;
-import com.mbclab.lablink.features.period.AcademicPeriod;
 import com.mbclab.lablink.shared.BaseEntity;
 import com.mbclab.lablink.shared.approval.Approvable;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -18,7 +17,6 @@ import java.util.Set;
 @Entity
 @Table(name = "projects", indexes = {
     @Index(name = "idx_project_approval_status", columnList = "approvalStatus"),
-    @Index(name = "idx_project_period_id", columnList = "period_id"),
     @Index(name = "idx_project_activity_type", columnList = "activityType"),
     @Index(name = "idx_project_status", columnList = "status")
 })
@@ -70,13 +68,10 @@ public class Project extends BaseEntity implements Approvable {
 
     // ========== RELASI ==========
 
-    // Periode kepengurusan
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "period_id")
-    private AcademicPeriod period;
-
     // Ketua Proyek (1 orang)
-    @ManyToOne(fetch = FetchType.LAZY)
+    @lombok.ToString.Exclude
+    @lombok.EqualsAndHashCode.Exclude
+    @ManyToOne
     @JoinColumn(name = "leader_id", nullable = false)
     private ResearchAssistant leader;
 

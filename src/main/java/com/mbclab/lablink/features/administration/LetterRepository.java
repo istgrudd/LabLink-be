@@ -17,22 +17,12 @@ public interface LetterRepository extends JpaRepository<Letter, String> {
     List<Letter> findByCategory(String category);
     List<Letter> findByEventId(String eventId);
 
-    @EntityGraph(attributePaths = {"event", "requester"})
-    List<Letter> findByPeriodId(String periodId);
-
     // Paginated + eager fetch for admin listing
     @EntityGraph(attributePaths = {"event", "requester"})
     Page<Letter> findAll(Pageable pageable);
-
-    // Paginated by period
-    @EntityGraph(attributePaths = {"event", "requester"})
-    Page<Letter> findByPeriodId(String periodId, Pageable pageable);
 
     // Count letters by type, category, year, and month for number generation
     @Query("SELECT COUNT(l) FROM Letter l WHERE l.letterType = ?1 AND l.category = ?2 " +
            "AND YEAR(l.issueDate) = ?3 AND MONTH(l.issueDate) = ?4")
     long countByTypeAndCategoryAndYearAndMonth(String letterType, String category, int year, int month);
-    
-    // For cascade delete
-    void deleteByPeriodId(String periodId);
 }

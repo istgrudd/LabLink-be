@@ -5,7 +5,6 @@ import com.mbclab.lablink.features.event.Event;
 import com.mbclab.lablink.features.event.EventRepository;
 import com.mbclab.lablink.features.member.ResearchAssistant;
 import com.mbclab.lablink.features.member.MemberRepository;
-import com.mbclab.lablink.features.period.AcademicPeriodRepository;
 import com.mbclab.lablink.features.administration.dto.*;
 import com.mbclab.lablink.shared.exception.BusinessValidationException;
 import com.mbclab.lablink.shared.exception.ResourceNotFoundException;
@@ -40,7 +39,6 @@ public class LetterService {
     private final EventRepository eventRepository;
     private final MemberRepository memberRepository;
     private final LetterNumberGenerator letterNumberGenerator;
-    private final AcademicPeriodRepository periodRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final LetterDocumentGenerator letterDocumentGenerator;
 
@@ -81,9 +79,6 @@ public class LetterService {
                     .orElseThrow(() -> new ResourceNotFoundException("Event tidak ditemukan"));
             letter.setEvent(event);
         }
-        
-        // Auto-assign to active period
-        periodRepository.findByIsActiveTrue().ifPresent(letter::setPeriod);
         
         Letter saved = letterRepository.save(letter);
         
@@ -208,11 +203,7 @@ public class LetterService {
                 .map(this::toResponse);
     }
 
-    public Page<LetterResponse> getLettersByPeriod(String periodId, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return letterRepository.findByPeriodId(periodId, pageable)
-                .map(this::toResponse);
-    }
+
 
     public LetterResponse getLetterById(String id) {
         Letter letter = letterRepository.findById(id)
