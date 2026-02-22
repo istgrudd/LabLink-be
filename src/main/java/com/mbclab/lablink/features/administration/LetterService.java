@@ -294,7 +294,14 @@ public class LetterService {
     @Transactional
     public IncomingLetterResponse createIncomingLetter(CreateIncomingLetterRequest request) {
         IncomingLetter letter = new IncomingLetter();
-        letter.setReferenceNumber(request.getReferenceNumber());
+        
+        // Handle optional reference number (generate if missing)
+        String refNum = request.getReferenceNumber();
+        if (refNum == null || refNum.isBlank()) {
+            refNum = "INC-" + System.currentTimeMillis();
+        }
+        letter.setReferenceNumber(refNum);
+        
         letter.setSender(request.getSender());
         letter.setSubject(request.getSubject());
         letter.setReceivedDate(request.getReceivedDate() != null 

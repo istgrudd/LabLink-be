@@ -133,7 +133,8 @@ public class GlobalExceptionHandler {
         response.put("timestamp", LocalDateTime.now().toString());
         response.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
         response.put("error", "Internal Server Error");
-        response.put("message", "Terjadi kesalahan internal. Silakan coba lagi atau hubungi administrator.");
+        // DEBUG: Include exception message
+        response.put("message", "Internal Error: " + ex.toString());
         
         // Log the actual exception for debugging (in production, use proper logging)
         ex.printStackTrace();
